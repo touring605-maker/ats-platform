@@ -1,0 +1,73 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit tests
+        run: echo "TODO — unit test runner not yet configured"
+        # run: pnpm run test:unit
+
+      - name: Integration tests
+        run: echo "TODO — integration test runner not yet configured"
+        # run: pnpm run test:integration
+
+      # - name: Build production image
+      #   run: docker build -t ats-platform:${{ github.sha }} .
+
+      # - name: Push to container registry
+      #   run: |
+      #     docker tag ats-platform:${{ github.sha }} ${{ vars.REGISTRY }}/ats-platform:${{ github.sha }}
+      #     docker push ${{ vars.REGISTRY }}/ats-platform:${{ github.sha }}
+
+      # - name: Deploy to staging (blue/green)
+      #   run: echo "Deploy to staging environment"
+
+      # - name: Smoke tests
+      #   run: echo "Run smoke tests against staging"
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # - name: Deploy to production (blue/green)
+      #   run: echo "Deploy to production environment"
+
+      # - name: Post-deploy smoke tests
+      #   run: echo "Run smoke tests against production"
+
+      # - name: Deployment notification
+      #   run: echo "Notify team of successful deployment"
+
+      - name: Placeholder
+        run: echo "Production deployment pipeline — configure with real infrastructure"
