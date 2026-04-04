@@ -140,9 +140,43 @@ export interface UpdateJob {
   isRemote?: boolean;
 }
 
+export type JobWithCount = Job & {
+  applicationCount?: number;
+};
+
+export interface PaginatedJobsWithCounts {
+  data: JobWithCount[];
+  pagination: Pagination;
+}
+
 export interface PaginatedJobs {
   data: Job[];
   pagination: Pagination;
+}
+
+export interface JobStats {
+  draft: number;
+  published: number;
+  closed: number;
+  archived: number;
+  total: number;
+}
+
+export type DashboardSummaryApplicationsByStatus = {
+  new?: number;
+  reviewed?: number;
+  shortlisted?: number;
+  rejected?: number;
+  hired?: number;
+};
+
+export interface DashboardSummary {
+  totalJobs: number;
+  activeJobs: number;
+  totalCandidates: number;
+  totalApplications: number;
+  applicationsByStatus: DashboardSummaryApplicationsByStatus;
+  recentJobs: JobWithCount[];
 }
 
 export interface Candidate {
@@ -318,6 +352,7 @@ export type ListJobsParams = {
   status?: JobStatus;
   search?: string;
   department?: string;
+  location?: string;
   /**
    * @minimum 1
    */

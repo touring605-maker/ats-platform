@@ -124,6 +124,40 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [jobs]
+      summary: Dashboard summary with counts and recent activity
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /jobs/stats:
+    get:
+      operationId: getJobStats
+      tags: [jobs]
+      summary: Job counts grouped by status
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Job status counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /jobs:
     get:
       operationId: listJobs
@@ -143,15 +177,19 @@ paths:
           in: query
           schema:
             type: string
+        - name: location
+          in: query
+          schema:
+            type: string
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
       responses:
         "200":
-          description: Paginated list of jobs
+          description: Paginated list of jobs with application counts
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PaginatedJobs"
+                $ref: "#/components/schemas/PaginatedJobsWithCounts"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -834,6 +872,27 @@ components:
         isRemote:
           type: boolean
 
+    JobWithCount:
+      allOf:
+        - $ref: "#/components/schemas/Job"
+        - type: object
+          properties:
+            applicationCount:
+              type: integer
+
+    PaginatedJobsWithCounts:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobWithCount"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+
     PaginatedJobs:
       type: object
       properties:
@@ -846,6 +905,62 @@ components:
       required:
         - data
         - pagination
+
+    JobStats:
+      type: object
+      properties:
+        draft:
+          type: integer
+        published:
+          type: integer
+        closed:
+          type: integer
+        archived:
+          type: integer
+        total:
+          type: integer
+      required:
+        - draft
+        - published
+        - closed
+        - archived
+        - total
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalJobs:
+          type: integer
+        activeJobs:
+          type: integer
+        totalCandidates:
+          type: integer
+        totalApplications:
+          type: integer
+        applicationsByStatus:
+          type: object
+          properties:
+            new:
+              type: integer
+            reviewed:
+              type: integer
+            shortlisted:
+              type: integer
+            rejected:
+              type: integer
+            hired:
+              type: integer
+        recentJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobWithCount"
+      required:
+        - totalJobs
+        - activeJobs
+        - totalCandidates
+        - totalApplications
+        - applicationsByStatus
+        - recentJobs
 
     Candidate:
       type: object

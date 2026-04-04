@@ -1,21 +1,44 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { jobsTable, type InsertJob } from "@workspace/db/schema";
-import { eq, and, ilike, count } from "drizzle-orm";
+import { eq, and, ilike, count, sql, desc } from "drizzle-orm";
 import { requireOrgMembership } from "../middlewares/requireAuth";
+import { CreateJobBody, UpdateJobBody } from "@workspace/api-zod";
 
 type JobStatus = "draft" | "published" | "closed" | "archived";
 const validJobStatuses: JobStatus[] = ["draft", "published", "closed", "archived"];
 
 const router = Router();
 
+router.get("/stats", requireOrgMembership(), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+
+  const rows = await db
+    .select({
+      status: jobsTable.status,
+      cnt: count(),
+    })
+    .from(jobsTable)
+    .where(eq(jobsTable.organizationId, organizationId))
+    .groupBy(jobsTable.status);
+
+  const stats: Record<string, number> = { draft: 0, published: 0, closed: 0, archived: 0, total: 0 };
+  for (const row of rows) {
+    stats[row.status] = Number(row.cnt);
+    stats.total += Number(row.cnt);
+  }
+
+  res.json(stats);
+});
+
 router.get("/", requireOrgMembership(), async (req, res) => {
   const { organizationId } = req.auth_context!;
   const status = req.query.status as string | undefined;
   const search = req.query.search as string | undefined;
   const department = req.query.department as string | undefined;
-  const page = req.query.page as string | undefined ?? "1";
-  const limit = req.query.limit as string | undefined ?? "20";
+  const location = req.query.location as string | undefined;
+  const page = (req.query.page as string | undefined) ?? "1";
+  const limit = (req.query.limit as string | undefined) ?? "20";
 
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
@@ -32,16 +55,46 @@ router.get("/", requireOrgMembership(), async (req, res) => {
   if (department) {
     conditions.push(eq(jobsTable.department, department));
   }
+  if (location) {
+    conditions.push(ilike(jobsTable.location, `%${location}%`));
+  }
 
   const where = and(...conditions);
 
   const [jobs, [{ total }]] = await Promise.all([
-    db.select().from(jobsTable).where(where).limit(limitNum).offset(offset).orderBy(jobsTable.createdAt),
+    db
+      .select({
+        id: jobsTable.id,
+        organizationId: jobsTable.organizationId,
+        title: jobsTable.title,
+        department: jobsTable.department,
+        location: jobsTable.location,
+        employmentType: jobsTable.employmentType,
+        salaryMin: jobsTable.salaryMin,
+        salaryMax: jobsTable.salaryMax,
+        salaryCurrency: jobsTable.salaryCurrency,
+        description: jobsTable.description,
+        requirements: jobsTable.requirements,
+        status: jobsTable.status,
+        customFields: jobsTable.customFields,
+        isRemote: jobsTable.isRemote,
+        publishedAt: jobsTable.publishedAt,
+        closedAt: jobsTable.closedAt,
+        createdBy: jobsTable.createdBy,
+        createdAt: jobsTable.createdAt,
+        updatedAt: jobsTable.updatedAt,
+        applicationCount: sql<number>`(SELECT COUNT(*) FROM applications WHERE applications.job_id = ${jobsTable.id})`.as("applicationCount"),
+      })
+      .from(jobsTable)
+      .where(where)
+      .limit(limitNum)
+      .offset(offset)
+      .orderBy(desc(jobsTable.createdAt)),
     db.select({ total: count() }).from(jobsTable).where(where),
   ]);
 
   res.json({
-    data: jobs,
+    data: jobs.map((j) => ({ ...j, applicationCount: Number(j.applicationCount) })),
     pagination: {
       page: pageNum,
       limit: limitNum,
@@ -71,7 +124,14 @@ router.get("/:id", requireOrgMembership(), async (req, res) => {
 
 router.post("/", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
   const { organizationId, userId } = req.auth_context!;
-  const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, customFields, isRemote } = req.body;
+
+  const parsed = CreateJobBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, customFields, isRemote } = parsed.data;
 
   const [job] = await db
     .insert(jobsTable)
@@ -99,6 +159,12 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
   const { organizationId } = req.auth_context!;
   const id = req.params.id as string;
 
+  const parsed = UpdateJobBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
   const [existing] = await db
     .select()
     .from(jobsTable)
@@ -110,7 +176,7 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
     return;
   }
 
-  const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, status, customFields, isRemote } = req.body;
+  const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, status, customFields, isRemote } = parsed.data;
 
   const updateData: Partial<InsertJob> & { publishedAt?: Date; closedAt?: Date } = {};
   if (title !== undefined) updateData.title = title;

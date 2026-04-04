@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "LastATS Employer Dashboard"
+version = "1.0.0"
+id = "artifacts/employer-dashboard"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18113
+
+[services.development]
+run = "pnpm --filter @workspace/employer-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/employer-dashboard", "run", "build" ]
+publicDir = "artifacts/employer-dashboard/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18113"
+BASE_PATH = "/"

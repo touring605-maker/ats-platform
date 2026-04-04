@@ -13,6 +13,7 @@ export type ListJobsParams = {
   status?: JobStatus;
   search?: string;
   department?: string;
+  location?: string;
   /**
    * @minimum 1
    */

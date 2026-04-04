@@ -105,6 +105,94 @@ export const AddOrganizationMemberBody = zod.object({
 });
 
 /**
+ * @summary Dashboard summary with counts and recent activity
+ */
+export const GetDashboardSummaryHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const GetDashboardSummaryResponse = zod.object({
+  totalJobs: zod.number(),
+  activeJobs: zod.number(),
+  totalCandidates: zod.number(),
+  totalApplications: zod.number(),
+  applicationsByStatus: zod.object({
+    new: zod.number().optional(),
+    reviewed: zod.number().optional(),
+    shortlisted: zod.number().optional(),
+    rejected: zod.number().optional(),
+    hired: zod.number().optional(),
+  }),
+  recentJobs: zod.array(
+    zod
+      .object({
+        id: zod.string().uuid(),
+        organizationId: zod.string().uuid(),
+        title: zod.string(),
+        department: zod.string().nullish(),
+        location: zod.string().nullish(),
+        employmentType: zod.enum([
+          "full_time",
+          "part_time",
+          "contract",
+          "internship",
+          "temporary",
+        ]),
+        salaryMin: zod.number().nullish(),
+        salaryMax: zod.number().nullish(),
+        salaryCurrency: zod.string().optional(),
+        description: zod.string().nullish(),
+        requirements: zod.string().nullish(),
+        status: zod.enum(["draft", "published", "closed", "archived"]),
+        customFields: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+              required: zod.boolean(),
+              options: zod.array(zod.string()).optional(),
+              order: zod.number(),
+            }),
+          )
+          .optional(),
+        isRemote: zod.boolean(),
+        publishedAt: zod.coerce.date().nullish(),
+        closedAt: zod.coerce.date().nullish(),
+        createdBy: zod.string(),
+        createdAt: zod.coerce.date().optional(),
+        updatedAt: zod.coerce.date().optional(),
+      })
+      .and(
+        zod.object({
+          applicationCount: zod.number().optional(),
+        }),
+      ),
+  ),
+});
+
+/**
+ * @summary Job counts grouped by status
+ */
+export const GetJobStatsHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const GetJobStatsResponse = zod.object({
+  draft: zod.number(),
+  published: zod.number(),
+  closed: zod.number(),
+  archived: zod.number(),
+  total: zod.number(),
+});
+
+/**
  * @summary List jobs for the organization
  */
 export const listJobsQueryPageDefault = 1;
@@ -116,6 +204,7 @@ export const ListJobsQueryParams = zod.object({
   status: zod.enum(["draft", "published", "closed", "archived"]).optional(),
   search: zod.coerce.string().optional(),
   department: zod.coerce.string().optional(),
+  location: zod.coerce.string().optional(),
   page: zod.coerce.number().min(1).default(listJobsQueryPageDefault),
   limit: zod.coerce
     .number()
@@ -133,44 +222,50 @@ export const ListJobsHeader = zod.object({
 
 export const ListJobsResponse = zod.object({
   data: zod.array(
-    zod.object({
-      id: zod.string().uuid(),
-      organizationId: zod.string().uuid(),
-      title: zod.string(),
-      department: zod.string().nullish(),
-      location: zod.string().nullish(),
-      employmentType: zod.enum([
-        "full_time",
-        "part_time",
-        "contract",
-        "internship",
-        "temporary",
-      ]),
-      salaryMin: zod.number().nullish(),
-      salaryMax: zod.number().nullish(),
-      salaryCurrency: zod.string().optional(),
-      description: zod.string().nullish(),
-      requirements: zod.string().nullish(),
-      status: zod.enum(["draft", "published", "closed", "archived"]),
-      customFields: zod
-        .array(
-          zod.object({
-            id: zod.string(),
-            label: zod.string(),
-            type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
-            required: zod.boolean(),
-            options: zod.array(zod.string()).optional(),
-            order: zod.number(),
-          }),
-        )
-        .optional(),
-      isRemote: zod.boolean(),
-      publishedAt: zod.coerce.date().nullish(),
-      closedAt: zod.coerce.date().nullish(),
-      createdBy: zod.string(),
-      createdAt: zod.coerce.date().optional(),
-      updatedAt: zod.coerce.date().optional(),
-    }),
+    zod
+      .object({
+        id: zod.string().uuid(),
+        organizationId: zod.string().uuid(),
+        title: zod.string(),
+        department: zod.string().nullish(),
+        location: zod.string().nullish(),
+        employmentType: zod.enum([
+          "full_time",
+          "part_time",
+          "contract",
+          "internship",
+          "temporary",
+        ]),
+        salaryMin: zod.number().nullish(),
+        salaryMax: zod.number().nullish(),
+        salaryCurrency: zod.string().optional(),
+        description: zod.string().nullish(),
+        requirements: zod.string().nullish(),
+        status: zod.enum(["draft", "published", "closed", "archived"]),
+        customFields: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+              required: zod.boolean(),
+              options: zod.array(zod.string()).optional(),
+              order: zod.number(),
+            }),
+          )
+          .optional(),
+        isRemote: zod.boolean(),
+        publishedAt: zod.coerce.date().nullish(),
+        closedAt: zod.coerce.date().nullish(),
+        createdBy: zod.string(),
+        createdAt: zod.coerce.date().optional(),
+        updatedAt: zod.coerce.date().optional(),
+      })
+      .and(
+        zod.object({
+          applicationCount: zod.number().optional(),
+        }),
+      ),
   ),
   pagination: zod.object({
     page: zod.number(),

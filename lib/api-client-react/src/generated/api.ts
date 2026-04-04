@@ -26,9 +26,11 @@ import type {
   CreateCandidate,
   CreateJob,
   CreateRating,
+  DashboardSummary,
   ForbiddenResponse,
   HealthStatus,
   Job,
+  JobStats,
   ListApplicationsParams,
   ListCandidatesParams,
   ListJobsParams,
@@ -38,7 +40,7 @@ import type {
   OrganizationMembership,
   PaginatedApplications,
   PaginatedCandidates,
-  PaginatedJobs,
+  PaginatedJobsWithCounts,
   UnauthorizedResponse,
   UpdateApplicationStatusBody,
   UpdateJob,
@@ -477,6 +479,154 @@ export const useAddOrganizationMember = <
 };
 
 /**
+ * @summary Dashboard summary with counts and recent activity
+ */
+export const getGetDashboardSummaryUrl = () => {
+  return `/api/dashboard/summary`;
+};
+
+export const getDashboardSummary = async (
+  options?: RequestInit,
+): Promise<DashboardSummary> => {
+  return customFetch<DashboardSummary>(getGetDashboardSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDashboardSummaryQueryKey = () => {
+  return [`/api/dashboard/summary`] as const;
+};
+
+export const getGetDashboardSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDashboardSummary>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDashboardSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDashboardSummary>>
+  > = ({ signal }) => getDashboardSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDashboardSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDashboardSummary>>
+>;
+export type GetDashboardSummaryQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Dashboard summary with counts and recent activity
+ */
+
+export function useGetDashboardSummary<
+  TData = Awaited<ReturnType<typeof getDashboardSummary>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboardSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDashboardSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Job counts grouped by status
+ */
+export const getGetJobStatsUrl = () => {
+  return `/api/jobs/stats`;
+};
+
+export const getJobStats = async (options?: RequestInit): Promise<JobStats> => {
+  return customFetch<JobStats>(getGetJobStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetJobStatsQueryKey = () => {
+  return [`/api/jobs/stats`] as const;
+};
+
+export const getGetJobStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJobStats>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getJobStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJobStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJobStats>>> = ({
+    signal,
+  }) => getJobStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getJobStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetJobStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJobStats>>
+>;
+export type GetJobStatsQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Job counts grouped by status
+ */
+
+export function useGetJobStats<
+  TData = Awaited<ReturnType<typeof getJobStats>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getJobStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetJobStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary List jobs for the organization
  */
 export const getListJobsUrl = (params?: ListJobsParams) => {
@@ -498,8 +648,8 @@ export const getListJobsUrl = (params?: ListJobsParams) => {
 export const listJobs = async (
   params?: ListJobsParams,
   options?: RequestInit,
-): Promise<PaginatedJobs> => {
-  return customFetch<PaginatedJobs>(getListJobsUrl(params), {
+): Promise<PaginatedJobsWithCounts> => {
+  return customFetch<PaginatedJobsWithCounts>(getListJobsUrl(params), {
     ...options,
     method: "GET",
   });
