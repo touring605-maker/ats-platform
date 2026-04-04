@@ -44,9 +44,14 @@ router.post("/register", async (req, res) => {
       displayName: usersTable.displayName,
     });
 
-  req.session.userId = user.id;
-
-  res.status(201).json({ user });
+  req.session.regenerate((err) => {
+    if (err) {
+      res.status(500).json({ error: "Session error" });
+      return;
+    }
+    req.session.userId = user.id;
+    res.status(201).json({ user });
+  });
 });
 
 router.post("/login", async (req, res) => {
@@ -74,14 +79,19 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  req.session.userId = user.id;
-
-  res.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-    },
+  req.session.regenerate((err) => {
+    if (err) {
+      res.status(500).json({ error: "Session error" });
+      return;
+    }
+    req.session.userId = user.id;
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+      },
+    });
   });
 });
 
@@ -192,21 +202,27 @@ router.post("/persona-login", async (req, res) => {
     return;
   }
 
-  req.session.userId = user.id;
+  req.session.regenerate((err) => {
+    if (err) {
+      res.status(500).json({ error: "Session error" });
+      return;
+    }
+    req.session.userId = user.id;
 
-  const memberships = await db
-    .select({
-      organizationId: organizationMembersTable.organizationId,
-      role: organizationMembersTable.role,
-      orgName: organizationsTable.name,
-      orgSlug: organizationsTable.slug,
-      orgLogoUrl: organizationsTable.logoUrl,
-    })
-    .from(organizationMembersTable)
-    .innerJoin(organizationsTable, eq(organizationMembersTable.organizationId, organizationsTable.id))
-    .where(eq(organizationMembersTable.userId, user.id));
-
-  res.json({ user, organizations: memberships });
+    db.select({
+        organizationId: organizationMembersTable.organizationId,
+        role: organizationMembersTable.role,
+        orgName: organizationsTable.name,
+        orgSlug: organizationsTable.slug,
+        orgLogoUrl: organizationsTable.logoUrl,
+      })
+      .from(organizationMembersTable)
+      .innerJoin(organizationsTable, eq(organizationMembersTable.organizationId, organizationsTable.id))
+      .where(eq(organizationMembersTable.userId, user.id))
+      .then((memberships) => {
+        res.json({ user, organizations: memberships });
+      });
+  });
 });
 
 export default router;
