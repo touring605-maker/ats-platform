@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -13,7 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Star, Search, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { FileText, Star, Search, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X } from "lucide-react";
 import { statusColor, formatDate } from "@/lib/utils";
 
 function StarRating({ rating }: { rating: number | null }) {
@@ -43,6 +49,9 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
   const [sortBy, setSortBy] = useState("appliedAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedJobFilter, setSelectedJobFilter] = useState(effectiveJobId || "all");
+  const [minRating, setMinRating] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
 
   const { data: jobsData } = useJobs({ limit: 100 });
@@ -50,12 +59,17 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
 
   const activeJobId = effectiveJobId || (selectedJobFilter !== "all" ? selectedJobFilter : undefined);
 
+  const hasAdvancedFilters = minRating !== "all" || dateFrom || dateTo;
+
   const { data, isLoading } = useApplications({
     jobId: activeJobId,
     status: status === "all" ? undefined : status,
     search: search || undefined,
     sortBy,
     sortOrder,
+    minRating: minRating !== "all" ? minRating : undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
     page,
     limit: 20,
   });
@@ -70,6 +84,13 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
       setSortBy(field);
       setSortOrder("desc");
     }
+    setPage(1);
+  }
+
+  function clearAdvancedFilters() {
+    setMinRating("all");
+    setDateFrom("");
+    setDateTo("");
     setPage(1);
   }
 
@@ -130,7 +151,96 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
             <SelectItem value="hired">Hired</SelectItem>
           </SelectContent>
         </Select>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant={hasAdvancedFilters ? "default" : "outline"} size="sm" className="gap-1.5 h-10">
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+              {hasAdvancedFilters && (
+                <span className="ml-1 bg-white/20 text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {[minRating !== "all", dateFrom, dateTo].filter(Boolean).length}
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72" align="end">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium">Advanced Filters</h4>
+                {hasAdvancedFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearAdvancedFilters} className="h-6 text-xs gap-1">
+                    <X className="w-3 h-3" /> Clear
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Minimum Rating</Label>
+                <Select value={minRating} onValueChange={(v) => { setMinRating(v); setPage(1); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any rating" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any rating</SelectItem>
+                    <SelectItem value="1">1+ stars</SelectItem>
+                    <SelectItem value="2">2+ stars</SelectItem>
+                    <SelectItem value="3">3+ stars</SelectItem>
+                    <SelectItem value="4">4+ stars</SelectItem>
+                    <SelectItem value="5">5 stars</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Date Range</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-gray-400">From</Label>
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                      className="text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-gray-400">To</Label>
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
+
+      {hasAdvancedFilters && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500">Active filters:</span>
+          {minRating !== "all" && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Star className="w-3 h-3" /> {minRating}+ stars
+              <button onClick={() => { setMinRating("all"); setPage(1); }}><X className="w-3 h-3 ml-0.5" /></button>
+            </Badge>
+          )}
+          {dateFrom && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              From: {dateFrom}
+              <button onClick={() => { setDateFrom(""); setPage(1); }}><X className="w-3 h-3 ml-0.5" /></button>
+            </Badge>
+          )}
+          {dateTo && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              To: {dateTo}
+              <button onClick={() => { setDateTo(""); setPage(1); }}><X className="w-3 h-3 ml-0.5" /></button>
+            </Badge>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-2 text-xs">
         <button onClick={() => toggleSort("appliedAt")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">

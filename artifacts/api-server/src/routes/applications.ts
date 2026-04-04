@@ -52,8 +52,6 @@ router.get("/", requireOrgMembership(), async (req, res) => {
     conditions.push(lte(applicationsTable.appliedAt, endDate));
   }
 
-  const where = and(...conditions);
-
   const ratingSubquery = db
     .select({
       applicationId: applicationRatingsTable.applicationId,
@@ -63,6 +61,17 @@ router.get("/", requireOrgMembership(), async (req, res) => {
     .from(applicationRatingsTable)
     .groupBy(applicationRatingsTable.applicationId)
     .as("rating_agg");
+
+  if (minRating) {
+    const minRatingNum = parseFloat(minRating);
+    if (!isNaN(minRatingNum)) {
+      conditions.push(
+        gte(sql`COALESCE(${ratingSubquery.avgRating}, 0)`, sql`${minRatingNum}`)
+      );
+    }
+  }
+
+  const where = and(...conditions);
 
   let orderByClause;
   const dir = sortOrder === "asc" ? asc : desc;
@@ -80,7 +89,7 @@ router.get("/", requireOrgMembership(), async (req, res) => {
       orderByClause = dir(applicationsTable.appliedAt);
   }
 
-  let baseQuery = db
+  const baseQuery = db
     .select({
       id: applicationsTable.id,
       jobId: applicationsTable.jobId,
@@ -110,31 +119,13 @@ router.get("/", requireOrgMembership(), async (req, res) => {
     .limit(limitNum)
     .offset(offset);
 
-  if (minRating) {
-    const minRatingNum = parseFloat(minRating);
-    if (!isNaN(minRatingNum)) {
-      baseQuery = baseQuery.having(
-        gte(sql`COALESCE(${ratingSubquery.avgRating}, 0)`, sql`${minRatingNum}`)
-      ) as typeof baseQuery;
-    }
-  }
-
-  let countQuery = db
+  const countQuery = db
     .select({ total: count() })
     .from(applicationsTable)
     .innerJoin(candidatesTable, eq(applicationsTable.candidateId, candidatesTable.id))
     .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
     .leftJoin(ratingSubquery, eq(applicationsTable.id, ratingSubquery.applicationId))
     .where(where);
-
-  if (minRating) {
-    const minRatingNum = parseFloat(minRating);
-    if (!isNaN(minRatingNum)) {
-      countQuery = countQuery.having(
-        gte(sql`COALESCE(${ratingSubquery.avgRating}, 0)`, sql`${minRatingNum}`)
-      ) as typeof countQuery;
-    }
-  }
 
   const [applications, [{ total }]] = await Promise.all([
     baseQuery,
