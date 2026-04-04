@@ -1,48 +1,49 @@
 CREATE TYPE "public"."email_status" AS ENUM('pending', 'sent', 'failed');--> statement-breakpoint
 CREATE TABLE "users" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" text NOT NULL,
-	"password_hash" text NOT NULL,
-	"display_name" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "users_email_unique" UNIQUE("email")
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "email" text NOT NULL,
+        "password_hash" text NOT NULL,
+        "display_name" text NOT NULL,
+        "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+        "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+        CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "email_templates" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"name" text NOT NULL,
-	"slug" text NOT NULL,
-	"subject" text NOT NULL,
-	"html_body" text NOT NULL,
-	"text_body" text,
-	"merge_fields" jsonb DEFAULT '[]'::jsonb,
-	"is_default" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "organization_id" uuid NOT NULL,
+        "name" text NOT NULL,
+        "slug" text NOT NULL,
+        "subject" text NOT NULL,
+        "html_body" text NOT NULL,
+        "text_body" text,
+        "merge_fields" jsonb DEFAULT '[]'::jsonb,
+        "is_default" boolean DEFAULT false NOT NULL,
+        "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+        "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "email_logs" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"application_id" uuid,
-	"candidate_id" uuid,
-	"template_id" uuid,
-	"to_email" text NOT NULL,
-	"subject" text NOT NULL,
-	"html_body" text NOT NULL,
-	"text_body" text,
-	"status" "email_status" DEFAULT 'pending' NOT NULL,
-	"sent_by" uuid,
-	"error_message" text,
-	"sent_at" timestamp with time zone DEFAULT now() NOT NULL
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "organization_id" uuid NOT NULL,
+        "application_id" uuid,
+        "candidate_id" uuid,
+        "template_id" uuid,
+        "to_email" text NOT NULL,
+        "subject" text NOT NULL,
+        "html_body" text NOT NULL,
+        "text_body" text,
+        "status" "email_status" DEFAULT 'pending' NOT NULL,
+        "sent_by" uuid,
+        "error_message" text,
+        "sent_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "organization_members" RENAME COLUMN "clerk_user_id" TO "user_id";--> statement-breakpoint
 ALTER TABLE "organization_members" DROP CONSTRAINT "uq_org_member";--> statement-breakpoint
-ALTER TABLE "jobs" ALTER COLUMN "created_by" SET DATA TYPE uuid;--> statement-breakpoint
-ALTER TABLE "application_ratings" ALTER COLUMN "rated_by" SET DATA TYPE uuid;--> statement-breakpoint
+ALTER TABLE "organization_members" ALTER COLUMN "user_id" SET DATA TYPE uuid USING "user_id"::uuid;--> statement-breakpoint
+ALTER TABLE "jobs" ALTER COLUMN "created_by" SET DATA TYPE uuid USING "created_by"::uuid;--> statement-breakpoint
+ALTER TABLE "application_ratings" ALTER COLUMN "rated_by" SET DATA TYPE uuid USING "rated_by"::uuid;--> statement-breakpoint
 ALTER TABLE "email_templates" ADD CONSTRAINT "email_templates_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_logs" ADD CONSTRAINT "email_logs_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_logs" ADD CONSTRAINT "email_logs_application_id_applications_id_fk" FOREIGN KEY ("application_id") REFERENCES "public"."applications"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
