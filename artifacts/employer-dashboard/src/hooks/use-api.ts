@@ -129,7 +129,18 @@ export function useDeleteJob() {
   });
 }
 
-export function useApplications(params?: { jobId?: string; status?: string; page?: number; limit?: number }) {
+export function useApplications(params?: {
+  jobId?: string;
+  status?: string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  minRating?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+}) {
   const getHeaders = useOrgHeaders();
   const { organization } = useOrganization();
 
@@ -141,6 +152,72 @@ export function useApplications(params?: { jobId?: string; status?: string; page
       return data;
     },
     enabled: !!organization?.id,
+  });
+}
+
+export function useApplication(id: string | undefined) {
+  const getHeaders = useOrgHeaders();
+  const { organization } = useOrganization();
+
+  return useQuery({
+    queryKey: ["application", id, organization?.id],
+    queryFn: async () => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.get(`/applications/${id}`, { headers });
+      return data;
+    },
+    enabled: !!id && !!organization?.id,
+  });
+}
+
+export function useUpdateApplicationStatus() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.patch(`/applications/${id}/status`, { status }, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["application"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+    },
+  });
+}
+
+export function useUpdateApplicationNotes() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.patch(`/applications/${id}/notes`, { notes }, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["application"] });
+    },
+  });
+}
+
+export function useAddRating() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, rating, comment }: { id: string; rating: number; comment?: string }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.post(`/applications/${id}/ratings`, { rating, comment }, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["application"] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
   });
 }
 

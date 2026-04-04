@@ -190,6 +190,11 @@ export default function JobDetail({ jobId }: JobDetailProps) {
             <CardContent>
               <p className="text-2xl font-bold text-gray-900">{appsData?.pagination?.total ?? 0}</p>
               <p className="text-xs text-gray-500">total applications</p>
+              {(appsData?.pagination?.total ?? 0) > 0 && (
+                <Link href={`/applications?jobId=${jobId}`}>
+                  <Button variant="outline" size="sm" className="mt-3 w-full">View Applications</Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
         </div>
