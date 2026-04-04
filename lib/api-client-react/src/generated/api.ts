@@ -17,10 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddOrganizationMember,
   Application,
   ApplicationDetail,
   ApplicationRating,
   Candidate,
+  CreateApplication,
   CreateCandidate,
   CreateJob,
   CreateRating,
@@ -32,6 +34,7 @@ import type {
   ListJobsParams,
   NotFoundResponse,
   Organization,
+  OrganizationMember,
   OrganizationMembership,
   PaginatedApplications,
   PaginatedCandidates,
@@ -293,6 +296,185 @@ export function useGetOrganization<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List organization members
+ */
+export const getGetOrganizationMembersUrl = (id: string) => {
+  return `/api/organizations/${id}/members`;
+};
+
+export const getOrganizationMembers = async (
+  id: string,
+  options?: RequestInit,
+): Promise<OrganizationMember[]> => {
+  return customFetch<OrganizationMember[]>(getGetOrganizationMembersUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOrganizationMembersQueryKey = (id: string) => {
+  return [`/api/organizations/${id}/members`] as const;
+};
+
+export const getGetOrganizationMembersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOrganizationMembers>>,
+  TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOrganizationMembers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOrganizationMembersQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOrganizationMembers>>
+  > = ({ signal }) => getOrganizationMembers(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOrganizationMembers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOrganizationMembersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOrganizationMembers>>
+>;
+export type GetOrganizationMembersQueryError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse
+>;
+
+/**
+ * @summary List organization members
+ */
+
+export function useGetOrganizationMembers<
+  TData = Awaited<ReturnType<typeof getOrganizationMembers>>,
+  TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOrganizationMembers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOrganizationMembersQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add or update an organization member
+ */
+export const getAddOrganizationMemberUrl = (id: string) => {
+  return `/api/organizations/${id}/members`;
+};
+
+export const addOrganizationMember = async (
+  id: string,
+  addOrganizationMember: AddOrganizationMember,
+  options?: RequestInit,
+): Promise<OrganizationMember> => {
+  return customFetch<OrganizationMember>(getAddOrganizationMemberUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addOrganizationMember),
+  });
+};
+
+export const getAddOrganizationMemberMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addOrganizationMember>>,
+    TError,
+    { id: string; data: BodyType<AddOrganizationMember> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addOrganizationMember>>,
+  TError,
+  { id: string; data: BodyType<AddOrganizationMember> },
+  TContext
+> => {
+  const mutationKey = ["addOrganizationMember"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addOrganizationMember>>,
+    { id: string; data: BodyType<AddOrganizationMember> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addOrganizationMember(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddOrganizationMemberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addOrganizationMember>>
+>;
+export type AddOrganizationMemberMutationBody = BodyType<AddOrganizationMember>;
+export type AddOrganizationMemberMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse
+>;
+
+/**
+ * @summary Add or update an organization member
+ */
+export const useAddOrganizationMember = <
+  TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addOrganizationMember>>,
+    TError,
+    { id: string; data: BodyType<AddOrganizationMember> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addOrganizationMember>>,
+  TError,
+  { id: string; data: BodyType<AddOrganizationMember> },
+  TContext
+> => {
+  return useMutation(getAddOrganizationMemberMutationOptions(options));
+};
 
 /**
  * @summary List jobs for the organization
@@ -917,6 +1099,278 @@ export const useCreateCandidate = <
 };
 
 /**
+ * @summary Get candidate details
+ */
+export const getGetCandidateUrl = (id: string) => {
+  return `/api/candidates/${id}`;
+};
+
+export const getCandidate = async (
+  id: string,
+  options?: RequestInit,
+): Promise<Candidate> => {
+  return customFetch<Candidate>(getGetCandidateUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCandidateQueryKey = (id: string) => {
+  return [`/api/candidates/${id}`] as const;
+};
+
+export const getGetCandidateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCandidate>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCandidateQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCandidate>>> = ({
+    signal,
+  }) => getCandidate(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCandidate>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCandidateQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCandidate>>
+>;
+export type GetCandidateQueryError = ErrorType<
+  UnauthorizedResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Get candidate details
+ */
+
+export function useGetCandidate<
+  TData = Awaited<ReturnType<typeof getCandidate>>,
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCandidate>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCandidateQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a candidate
+ */
+export const getUpdateCandidateUrl = (id: string) => {
+  return `/api/candidates/${id}`;
+};
+
+export const updateCandidate = async (
+  id: string,
+  createCandidate: CreateCandidate,
+  options?: RequestInit,
+): Promise<Candidate> => {
+  return customFetch<Candidate>(getUpdateCandidateUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCandidate),
+  });
+};
+
+export const getUpdateCandidateMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCandidate>>,
+    TError,
+    { id: string; data: BodyType<CreateCandidate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCandidate>>,
+  TError,
+  { id: string; data: BodyType<CreateCandidate> },
+  TContext
+> => {
+  const mutationKey = ["updateCandidate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCandidate>>,
+    { id: string; data: BodyType<CreateCandidate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCandidate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCandidate>>
+>;
+export type UpdateCandidateMutationBody = BodyType<CreateCandidate>;
+export type UpdateCandidateMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Update a candidate
+ */
+export const useUpdateCandidate = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCandidate>>,
+    TError,
+    { id: string; data: BodyType<CreateCandidate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCandidate>>,
+  TError,
+  { id: string; data: BodyType<CreateCandidate> },
+  TContext
+> => {
+  return useMutation(getUpdateCandidateMutationOptions(options));
+};
+
+/**
+ * @summary Delete a candidate
+ */
+export const getDeleteCandidateUrl = (id: string) => {
+  return `/api/candidates/${id}`;
+};
+
+export const deleteCandidate = async (
+  id: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteCandidateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCandidateMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCandidate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCandidate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteCandidate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCandidate>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteCandidate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCandidateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCandidate>>
+>;
+
+export type DeleteCandidateMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Delete a candidate
+ */
+export const useDeleteCandidate = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCandidate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCandidate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteCandidateMutationOptions(options));
+};
+
+/**
  * @summary List applications
  */
 export const getListApplicationsUrl = (params?: ListApplicationsParams) => {
@@ -1014,6 +1468,98 @@ export function useListApplications<
 }
 
 /**
+ * @summary Create a new application
+ */
+export const getCreateApplicationUrl = () => {
+  return `/api/applications`;
+};
+
+export const createApplication = async (
+  createApplication: CreateApplication,
+  options?: RequestInit,
+): Promise<Application> => {
+  return customFetch<Application>(getCreateApplicationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createApplication),
+  });
+};
+
+export const getCreateApplicationMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createApplication>>,
+    TError,
+    { data: BodyType<CreateApplication> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createApplication>>,
+  TError,
+  { data: BodyType<CreateApplication> },
+  TContext
+> => {
+  const mutationKey = ["createApplication"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createApplication>>,
+    { data: BodyType<CreateApplication> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createApplication(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createApplication>>
+>;
+export type CreateApplicationMutationBody = BodyType<CreateApplication>;
+export type CreateApplicationMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Create a new application
+ */
+export const useCreateApplication = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createApplication>>,
+    TError,
+    { data: BodyType<CreateApplication> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createApplication>>,
+  TError,
+  { data: BodyType<CreateApplication> },
+  TContext
+> => {
+  return useMutation(getCreateApplicationMutationOptions(options));
+};
+
+/**
  * @summary Get application details with ratings
  */
 export const getGetApplicationUrl = (id: string) => {
@@ -1101,6 +1647,96 @@ export function useGetApplication<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Delete an application
+ */
+export const getDeleteApplicationUrl = (id: string) => {
+  return `/api/applications/${id}`;
+};
+
+export const deleteApplication = async (
+  id: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteApplicationUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteApplicationMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteApplication>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteApplication>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteApplication"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteApplication>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteApplication(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteApplication>>
+>;
+
+export type DeleteApplicationMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Delete an application
+ */
+export const useDeleteApplication = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteApplication>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteApplication>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteApplicationMutationOptions(options));
+};
 
 /**
  * @summary Update application status

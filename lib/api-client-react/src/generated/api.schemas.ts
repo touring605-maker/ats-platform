@@ -236,6 +236,51 @@ export interface PaginatedApplications {
   pagination: Pagination;
 }
 
+export type CreateApplicationCustomFieldResponses = { [key: string]: string };
+
+export interface CreateApplication {
+  jobId: string;
+  candidateId: string;
+  coverLetter?: string;
+  customFieldResponses?: CreateApplicationCustomFieldResponses;
+}
+
+export type OrganizationMemberRole =
+  (typeof OrganizationMemberRole)[keyof typeof OrganizationMemberRole];
+
+export const OrganizationMemberRole = {
+  admin: "admin",
+  hiring_manager: "hiring_manager",
+  viewer: "viewer",
+} as const;
+
+export interface OrganizationMember {
+  id: string;
+  organizationId: string;
+  clerkUserId: string;
+  role: OrganizationMemberRole;
+  displayName?: string | null;
+  email?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type AddOrganizationMemberRole =
+  (typeof AddOrganizationMemberRole)[keyof typeof AddOrganizationMemberRole];
+
+export const AddOrganizationMemberRole = {
+  admin: "admin",
+  hiring_manager: "hiring_manager",
+  viewer: "viewer",
+} as const;
+
+export interface AddOrganizationMember {
+  clerkUserId: string;
+  role?: AddOrganizationMemberRole;
+  displayName?: string;
+  email?: string;
+}
+
 export interface CreateRating {
   /**
    * @minimum 1

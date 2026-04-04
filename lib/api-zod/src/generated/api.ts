@@ -56,6 +56,55 @@ export const GetOrganizationResponse = zod.object({
 });
 
 /**
+ * @summary List organization members
+ */
+export const GetOrganizationMembersParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetOrganizationMembersHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const GetOrganizationMembersResponseItem = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  clerkUserId: zod.string(),
+  role: zod.enum(["admin", "hiring_manager", "viewer"]),
+  displayName: zod.string().nullish(),
+  email: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const GetOrganizationMembersResponse = zod.array(
+  GetOrganizationMembersResponseItem,
+);
+
+/**
+ * @summary Add or update an organization member
+ */
+export const AddOrganizationMemberParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const AddOrganizationMemberHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const AddOrganizationMemberBody = zod.object({
+  clerkUserId: zod.string(),
+  role: zod.enum(["admin", "hiring_manager", "viewer"]).optional(),
+  displayName: zod.string().optional(),
+  email: zod.string().optional(),
+});
+
+/**
  * @summary List jobs for the organization
  */
 export const listJobsQueryPageDefault = 1;
@@ -386,6 +435,86 @@ export const CreateCandidateBody = zod.object({
 });
 
 /**
+ * @summary Get candidate details
+ */
+export const GetCandidateParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetCandidateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const GetCandidateResponse = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  firstName: zod.string(),
+  lastName: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  resumeUrl: zod.string().nullish(),
+  linkedinUrl: zod.string().nullish(),
+  source: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Update a candidate
+ */
+export const UpdateCandidateParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateCandidateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const UpdateCandidateBody = zod.object({
+  firstName: zod.string(),
+  lastName: zod.string(),
+  email: zod.string(),
+  phone: zod.string().optional(),
+  resumeUrl: zod.string().optional(),
+  linkedinUrl: zod.string().optional(),
+  source: zod.string().optional(),
+});
+
+export const UpdateCandidateResponse = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  firstName: zod.string(),
+  lastName: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  resumeUrl: zod.string().nullish(),
+  linkedinUrl: zod.string().nullish(),
+  source: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Delete a candidate
+ */
+export const DeleteCandidateParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const DeleteCandidateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+/**
  * @summary List applications
  */
 export const listApplicationsQueryPageDefault = 1;
@@ -451,6 +580,23 @@ export const ListApplicationsResponse = zod.object({
 });
 
 /**
+ * @summary Create a new application
+ */
+export const CreateApplicationHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const CreateApplicationBody = zod.object({
+  jobId: zod.string().uuid(),
+  candidateId: zod.string().uuid(),
+  coverLetter: zod.string().optional(),
+  customFieldResponses: zod.record(zod.string(), zod.string()).optional(),
+});
+
+/**
  * @summary Get application details with ratings
  */
 export const GetApplicationParams = zod.object({
@@ -505,6 +651,20 @@ export const GetApplicationResponse = zod
         .optional(),
     }),
   );
+
+/**
+ * @summary Delete an application
+ */
+export const DeleteApplicationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const DeleteApplicationHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
 
 /**
  * @summary Update application status

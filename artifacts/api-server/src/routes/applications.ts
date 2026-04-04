@@ -109,6 +109,70 @@ router.get("/:id", requireOrgMembership(), async (req, res) => {
   res.json({ ...application, ratings });
 });
 
+router.post("/", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const { jobId, candidateId, coverLetter, customFieldResponses } = req.body;
+
+  if (!jobId || !candidateId) {
+    res.status(400).json({ error: "jobId and candidateId are required" });
+    return;
+  }
+
+  const [job] = await db
+    .select({ id: jobsTable.id })
+    .from(jobsTable)
+    .where(and(eq(jobsTable.id, jobId), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!job) {
+    res.status(404).json({ error: "Job not found in this organization" });
+    return;
+  }
+
+  const [candidate] = await db
+    .select({ id: candidatesTable.id })
+    .from(candidatesTable)
+    .where(and(eq(candidatesTable.id, candidateId), eq(candidatesTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!candidate) {
+    res.status(404).json({ error: "Candidate not found in this organization" });
+    return;
+  }
+
+  const [application] = await db
+    .insert(applicationsTable)
+    .values({
+      jobId,
+      candidateId,
+      coverLetter,
+      customFieldResponses: customFieldResponses || {},
+    })
+    .returning();
+
+  res.status(201).json(application);
+});
+
+router.delete("/:id", requireOrgMembership(["admin"]), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const id = req.params.id as string;
+
+  const [existing] = await db
+    .select({ appId: applicationsTable.id })
+    .from(applicationsTable)
+    .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
+    .where(and(eq(applicationsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!existing) {
+    res.status(404).json({ error: "Application not found" });
+    return;
+  }
+
+  await db.delete(applicationsTable).where(eq(applicationsTable.id, id));
+  res.status(204).send();
+});
+
 router.patch("/:id/status", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
   const { organizationId } = req.auth_context!;
   const id = req.params.id as string;

@@ -77,6 +77,53 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{id}/members:
+    get:
+      operationId: getOrganizationMembers
+      tags: [organizations]
+      summary: List organization members
+      parameters:
+        - $ref: "#/components/parameters/OrgIdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: List of organization members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrganizationMember"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      operationId: addOrganizationMember
+      tags: [organizations]
+      summary: Add or update an organization member
+      parameters:
+        - $ref: "#/components/parameters/OrgIdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddOrganizationMember"
+      responses:
+        "201":
+          description: Member added or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationMember"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /jobs:
     get:
       operationId: listJobs
@@ -241,6 +288,70 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /candidates/{id}:
+    get:
+      operationId: getCandidate
+      tags: [candidates]
+      summary: Get candidate details
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Candidate details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Candidate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: updateCandidate
+      tags: [candidates]
+      summary: Update a candidate
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCandidate"
+      responses:
+        "200":
+          description: Candidate updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Candidate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteCandidate
+      tags: [candidates]
+      summary: Delete a candidate
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "204":
+          description: Candidate deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /applications:
     get:
       operationId: listApplications
@@ -269,6 +380,32 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+    post:
+      operationId: createApplication
+      tags: [applications]
+      summary: Create a new application
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplication"
+      responses:
+        "201":
+          description: Application created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /applications/{id}:
     get:
       operationId: getApplication
@@ -286,6 +423,23 @@ paths:
                 $ref: "#/components/schemas/ApplicationDetail"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteApplication
+      tags: [applications]
+      summary: Delete an application
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "204":
+          description: Application deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -889,6 +1043,72 @@ components:
         - applicationId
         - ratedBy
         - rating
+
+    CreateApplication:
+      type: object
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        candidateId:
+          type: string
+          format: uuid
+        coverLetter:
+          type: string
+        customFieldResponses:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - jobId
+        - candidateId
+
+    OrganizationMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        clerkUserId:
+          type: string
+        role:
+          type: string
+          enum: [admin, hiring_manager, viewer]
+        displayName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organizationId
+        - clerkUserId
+        - role
+
+    AddOrganizationMember:
+      type: object
+      properties:
+        clerkUserId:
+          type: string
+        role:
+          type: string
+          enum: [admin, hiring_manager, viewer]
+        displayName:
+          type: string
+        email:
+          type: string
+      required:
+        - clerkUserId
 
     CreateRating:
       type: object
