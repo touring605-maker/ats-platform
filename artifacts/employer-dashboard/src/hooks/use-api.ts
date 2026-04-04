@@ -45,7 +45,7 @@ export function useJobStats() {
   });
 }
 
-export function useJobs(params?: { status?: string; search?: string; page?: number; limit?: number }) {
+export function useJobs(params?: { status?: string; search?: string; department?: string; location?: string; page?: number; limit?: number }) {
   const getHeaders = useOrgHeaders();
   const { organization } = useOrganization();
 

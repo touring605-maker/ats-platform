@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import CustomFieldsBuilder, { type CustomField } from "@/components/custom-fields-builder";
 
 interface JobFormProps {
   jobId?: string;
@@ -42,6 +43,8 @@ export default function JobForm({ jobId }: JobFormProps) {
     isRemote: false,
   });
 
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+
   useEffect(() => {
     if (existingJob) {
       setForm({
@@ -56,11 +59,16 @@ export default function JobForm({ jobId }: JobFormProps) {
         requirements: existingJob.requirements || "",
         isRemote: existingJob.isRemote || false,
       });
+      if (existingJob.customFields && Array.isArray(existingJob.customFields)) {
+        setCustomFields(existingJob.customFields as CustomField[]);
+      }
     }
   }, [existingJob]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validFields = customFields.filter((f) => f.label.trim());
 
     const body = {
       title: form.title,
@@ -73,6 +81,7 @@ export default function JobForm({ jobId }: JobFormProps) {
       description: form.description || undefined,
       requirements: form.requirements || undefined,
       isRemote: form.isRemote,
+      customFields: validFields.length > 0 ? validFields : undefined,
     };
 
     try {
@@ -243,6 +252,19 @@ export default function JobForm({ jobId }: JobFormProps) {
                 rows={4}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Application Form Fields</CardTitle>
+            <p className="text-xs text-gray-500 mt-1">
+              Define custom fields that candidates will fill out when applying to this job.
+              These fields appear in addition to the standard application fields (name, email, resume).
+            </p>
+          </CardHeader>
+          <CardContent>
+            <CustomFieldsBuilder fields={customFields} onChange={setCustomFields} />
           </CardContent>
         </Card>
 

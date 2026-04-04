@@ -27,6 +27,8 @@ export default function JobsPage() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [department, setDepartment] = useState("");
+  const [location, setLocation] = useState("");
   const [page, setPage] = useState(1);
   const { toast } = useToast();
   const deleteJob = useDeleteJob();
@@ -34,6 +36,8 @@ export default function JobsPage() {
   const { data, isLoading, isError } = useJobs({
     search: search || undefined,
     status: status === "all" ? undefined : status,
+    department: department || undefined,
+    location: location || undefined,
     page,
     limit: 20,
   });
@@ -66,8 +70,8 @@ export default function JobsPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             placeholder="Search jobs..."
@@ -88,6 +92,18 @@ export default function JobsPage() {
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        <Input
+          placeholder="Department"
+          value={department}
+          onChange={(e) => { setDepartment(e.target.value); setPage(1); }}
+          className="w-[160px]"
+        />
+        <Input
+          placeholder="Location"
+          value={location}
+          onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+          className="w-[160px]"
+        />
       </div>
 
       {isError ? (

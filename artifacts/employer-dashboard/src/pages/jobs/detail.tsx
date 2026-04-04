@@ -132,6 +132,30 @@ export default function JobDetail({ jobId }: JobDetailProps) {
         </div>
 
         <div className="space-y-6">
+          {job.customFields && Array.isArray(job.customFields) && job.customFields.length > 0 && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">Application Form Fields</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {(job.customFields as Array<{ id: string; label: string; type: string; required: boolean; options?: string[] }>).map((field: { id: string; label: string; type: string; required: boolean; options?: string[] }) => (
+                    <div key={field.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">{field.label}</span>
+                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{field.type}</span>
+                        {field.required && <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-600">Required</span>}
+                      </div>
+                      {field.options && field.options.length > 0 && (
+                        <span className="text-xs text-gray-400">{field.options.length} options</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Details</CardTitle>
