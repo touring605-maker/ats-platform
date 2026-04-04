@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useApplications, useJobs } from "@/hooks/use-api";
+import { useApplications, useJobs, useBulkUpdateApplicationStatus } from "@/hooks/use-api";
 import { Link, useSearch } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { FileText, Star, Search, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { FileText, Star, Search, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X, CheckSquare } from "lucide-react";
 import { statusColor, formatDate } from "@/lib/utils";
 
 function StarRating({ rating }: { rating: number | null }) {
@@ -53,6 +55,10 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const { toast } = useToast();
+  const bulkUpdate = useBulkUpdateApplicationStatus();
 
   const { data: jobsData } = useJobs({ limit: 100 });
   const jobs = jobsData?.data || [];
@@ -76,6 +82,47 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
 
   const applications = data?.data || [];
   const pagination = data?.pagination;
+
+  const allPageIds = applications.map((a: { id: string }) => a.id);
+  const allSelected = allPageIds.length > 0 && allPageIds.every((id: string) => selectedIds.has(id));
+  const someSelected = selectedIds.size > 0;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allPageIds));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  }
+
+  function handleBulkStatus(newStatus: string) {
+    const ids = Array.from(selectedIds);
+    bulkUpdate.mutate(
+      { ids, status: newStatus },
+      {
+        onSuccess: (result) => {
+          toast({
+            title: "Bulk update complete",
+            description: `${result.succeeded} updated${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
+          });
+          setSelectedIds(new Set());
+        },
+        onError: () => {
+          toast({ title: "Error", description: "Bulk update failed", variant: "destructive" });
+        },
+      }
+    );
+  }
 
   function toggleSort(field: string) {
     if (sortBy === field) {
@@ -242,19 +289,55 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
         </div>
       )}
 
-      <div className="flex gap-2 text-xs">
-        <button onClick={() => toggleSort("appliedAt")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
-          Date <SortIcon field="appliedAt" />
-        </button>
-        <button onClick={() => toggleSort("candidateName")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
-          Name <SortIcon field="candidateName" />
-        </button>
-        <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
-          Rating <SortIcon field="rating" />
-        </button>
-        <button onClick={() => toggleSort("status")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
-          Status <SortIcon field="status" />
-        </button>
+      {someSelected && (
+        <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <CheckSquare className="w-4 h-4 text-indigo-600" />
+          <span className="text-sm font-medium text-indigo-700">{selectedIds.size} selected</span>
+          <div className="flex gap-1.5 ml-auto">
+            {["reviewed", "shortlisted", "rejected", "hired"].map((s) => (
+              <Button
+                key={s}
+                variant="outline"
+                size="sm"
+                className="text-xs capitalize h-7"
+                onClick={() => handleBulkStatus(s)}
+                disabled={bulkUpdate.isPending}
+              >
+                {s}
+              </Button>
+            ))}
+            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-4 text-xs">
+        {applications.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={toggleSelectAll}
+              aria-label="Select all on this page"
+            />
+            <span className="text-gray-500">Select all</span>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button onClick={() => toggleSort("appliedAt")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
+            Date <SortIcon field="appliedAt" />
+          </button>
+          <button onClick={() => toggleSort("candidateName")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
+            Name <SortIcon field="candidateName" />
+          </button>
+          <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
+            Rating <SortIcon field="rating" />
+          </button>
+          <button onClick={() => toggleSort("status")} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
+            Status <SortIcon field="status" />
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -284,45 +367,53 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
             avgRating: string | null;
             ratingCount: number | null;
           }) => (
-            <Link key={app.id} href={`/applications/${app.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                        <span className="text-sm font-medium text-indigo-700">
-                          {app.candidateFirstName?.[0]}{app.candidateLastName?.[0]}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {app.candidateFirstName} {app.candidateLastName}
-                          </p>
-                          <Badge variant="secondary" className={statusColor(app.status)}>{app.status}</Badge>
+            <div key={app.id} className="flex items-center gap-3">
+              <Checkbox
+                checked={selectedIds.has(app.id)}
+                onCheckedChange={() => toggleSelect(app.id)}
+                aria-label={`Select ${app.candidateFirstName} ${app.candidateLastName}`}
+                className="shrink-0"
+              />
+              <Link href={`/applications/${app.id}`} className="flex-1 min-w-0">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-medium text-indigo-700">
+                            {app.candidateFirstName?.[0]}{app.candidateLastName?.[0]}
+                          </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {!effectiveJobId && <>{app.jobTitle} · </>}
-                          {app.candidateEmail}
-                        </p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {app.candidateFirstName} {app.candidateLastName}
+                            </p>
+                            <Badge variant="secondary" className={statusColor(app.status)}>{app.status}</Badge>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {!effectiveJobId && <>{app.jobTitle} · </>}
+                            {app.candidateEmail}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
+                        <StarRating rating={app.avgRating ? parseFloat(app.avgRating) : null} />
+                        {app.ratingCount ? (
+                          <span className="text-[10px] text-gray-400">{app.ratingCount} review{app.ratingCount !== 1 ? "s" : ""}</span>
+                        ) : null}
+                        <span className="text-xs text-gray-400">{formatDate(app.appliedAt)}</span>
+                        {app.candidateResumeUrl && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-primary">
+                            <FileText className="w-3 h-3" /> Resume
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
-                      <StarRating rating={app.avgRating ? parseFloat(app.avgRating) : null} />
-                      {app.ratingCount ? (
-                        <span className="text-[10px] text-gray-400">{app.ratingCount} review{app.ratingCount !== 1 ? "s" : ""}</span>
-                      ) : null}
-                      <span className="text-xs text-gray-400">{formatDate(app.appliedAt)}</span>
-                      {app.candidateResumeUrl && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-primary">
-                          <FileText className="w-3 h-3" /> Resume
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           ))}
 
           {pagination && pagination.totalPages > 1 && (

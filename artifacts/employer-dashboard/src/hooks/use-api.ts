@@ -188,6 +188,28 @@ export function useUpdateApplicationStatus() {
   });
 }
 
+export function useBulkUpdateApplicationStatus() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
+      const headers = await getHeaders();
+      const results = await Promise.allSettled(
+        ids.map((id) => apiClient.patch(`/applications/${id}/status`, { status }, { headers }))
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      return { succeeded, failed };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["application"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+    },
+  });
+}
+
 export function useUpdateApplicationNotes() {
   const getHeaders = useOrgHeaders();
   const queryClient = useQueryClient();

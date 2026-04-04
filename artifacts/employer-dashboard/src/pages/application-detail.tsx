@@ -25,6 +25,7 @@ import {
   Briefcase,
   Building2,
   Download,
+  ExternalLink,
   User,
   MessageSquare,
 } from "lucide-react";
@@ -200,28 +201,48 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
           {app.candidateResumeUrl && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Resume
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> Resume
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <a
+                      href={`${import.meta.env.BASE_URL}api/storage${app.candidateResumeUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <ExternalLink className="w-3.5 h-3.5" /> Open
+                      </Button>
+                    </a>
+                    <a
+                      href={`${import.meta.env.BASE_URL}api/storage${app.candidateResumeUrl}`}
+                      download
+                    >
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Download className="w-3.5 h-3.5" /> Download
+                      </Button>
+                    </a>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FileText className="w-8 h-8 text-primary" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-700">Uploaded Resume</p>
-                    <p className="text-xs text-gray-500 truncate">{app.candidateResumeUrl}</p>
+                {app.candidateResumeUrl.toLowerCase().endsWith(".pdf") ? (
+                  <iframe
+                    src={`${import.meta.env.BASE_URL}api/storage${app.candidateResumeUrl}`}
+                    className="w-full h-[500px] rounded-lg border"
+                    title="Resume Preview"
+                  />
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <FileText className="w-8 h-8 text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-700">Uploaded Resume</p>
+                      <p className="text-xs text-gray-500 truncate">{app.candidateResumeUrl.split("/").pop()}</p>
+                      <p className="text-xs text-gray-400 mt-1">Preview not available for this file type. Use Open or Download above.</p>
+                    </div>
                   </div>
-                  <a
-                    href={`/api/storage${app.candidateResumeUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0"
-                  >
-                    <Button variant="outline" size="sm" className="gap-1">
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </Button>
-                  </a>
-                </div>
+                )}
               </CardContent>
             </Card>
           )}
