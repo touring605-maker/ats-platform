@@ -11,6 +11,7 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - **`lib/db/src/schema/`** — Drizzle ORM schema: organizations, organizationMembers, jobs, candidates, applications, applicationRatings
 - **`artifacts/api-server/`** — Express 5 API server with Clerk auth, tenant-isolated routes for jobs, candidates, applications, organizations, dashboard
 - **`artifacts/employer-dashboard/`** — React + Vite employer dashboard with Clerk auth, Shadcn UI, TanStack Query
+- **`artifacts/careers-page/`** — React + Vite public careers page (no auth), job listings, application form with resume upload
 - **`lib/api-spec/`** — OpenAPI 3.1 spec with Orval codegen
 - **`lib/api-zod/`** — Generated Zod schemas from OpenAPI spec (used for server-side validation)
 
@@ -75,6 +76,11 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `GET /api/applications/:id` — get application detail with ratings
 - `PATCH /api/applications/:id/status` — update application status
 - `GET/POST /api/applications/:id/ratings` — get/add ratings
+- `GET /api/careers/:orgSlug` — public careers page: org info + published jobs (no auth)
+- `GET /api/careers/:orgSlug/jobs/:jobId` — public job detail (no auth)
+- `POST /api/careers/:orgSlug/jobs/:jobId/apply` — submit application with resume upload (no auth, multipart/form-data)
+- `GET /api/storage/objects/*` — serve private objects (auth required)
+- `GET /api/storage/public-objects/*` — serve public objects (no auth)
 
 ## Frontend Pages (employer-dashboard)
 
@@ -87,9 +93,24 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `/applications` — Applications list with status filter
 - `/settings` — Organization settings (Clerk OrganizationProfile)
 
+## Frontend Pages (careers-page)
+
+- `/:orgSlug` — Organization careers landing: branding, job list with search/department/location filters
+- `/:orgSlug/jobs/:jobId` — Job detail with rich text description/requirements, Apply Now button, inline application form with dynamic custom fields + resume upload
+
+## Object Storage
+
+- **Bucket ID**: stored in `DEFAULT_OBJECT_STORAGE_BUCKET_ID` env var
+- **Private directory**: `PRIVATE_OBJECT_DIR` env var — for resumes and private uploads
+- **Public paths**: `PUBLIC_OBJECT_SEARCH_PATHS` env var — comma-separated public asset directories
+- **Resume uploads**: multer (memory storage, 10MB limit, PDF/DOC/DOCX only) → GCS via `objectStorageClient`
+- **Resume path format**: `/objects/resumes/{orgId}/{jobId}/{timestamp}-{random}.{ext}`
+
 ## Important Notes
 
 - Express 5: `req.params.id` must be cast as `string` 
 - CORS: configured via `ALLOWED_ORIGINS` env var (comma-separated), defaults to `https://${REPLIT_DEV_DOMAIN}`
 - API Zod index.ts only re-exports from `./generated/api` (not types, to avoid name conflicts)
 - `.github/workflows/` files cannot be pushed via OAuth — gitignored; push manually with PAT with workflow scope
+- Careers page requires no auth — public endpoints use `:orgSlug` path param for tenant scoping
+- DOMPurify used on both employer dashboard and careers page for safe HTML rendering of job descriptions
