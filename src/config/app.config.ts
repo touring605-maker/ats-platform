@@ -1,11 +1,3 @@
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Required environment variable ${name} is not set.`);
-  }
-  return value;
-}
-
 function optionalEnv(name: string, fallback: string): string {
   return process.env[name] ?? fallback;
 }
@@ -15,8 +7,7 @@ export const appConfig = {
   port: Number(optionalEnv('PORT', '3000')),
 
   auth: {
-    issuer: requireEnv('AUTH_ISSUER'),
-    audience: requireEnv('AUTH_AUDIENCE'),
+    provider: 'clerk' as const,
   },
 
   cloud: {
@@ -24,7 +15,7 @@ export const appConfig = {
   },
 
   cors: {
-    allowedOrigins: optionalEnv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(','),
+    allowedOrigins: optionalEnv('ALLOWED_ORIGINS', `https://${process.env.REPLIT_DEV_DOMAIN}`).split(','),
   },
 
   rateLimit: {
