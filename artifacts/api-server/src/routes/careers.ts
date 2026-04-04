@@ -170,7 +170,23 @@ router.get("/:orgSlug/jobs/:jobId", async (req, res) => {
   }
 });
 
-router.post("/:orgSlug/jobs/:jobId/apply", upload.single("resume"), async (req, res) => {
+router.post("/:orgSlug/jobs/:jobId/apply", (req, res, next) => {
+  upload.single("resume")(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          res.status(400).json({ error: "Resume file must be under 10MB" });
+          return;
+        }
+        res.status(400).json({ error: `Upload error: ${err.message}` });
+        return;
+      }
+      res.status(400).json({ error: err.message || "Invalid file upload" });
+      return;
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const slug = req.params.orgSlug as string;
     const jobId = req.params.jobId as string;
@@ -341,11 +357,7 @@ router.post("/:orgSlug/jobs/:jobId/apply", upload.single("resume"), async (req, 
       message: "Application submitted successfully",
       applicationId: application.id,
     });
-  } catch (err: any) {
-    if (err.message?.includes("Only PDF, DOC, and DOCX")) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
+  } catch (err) {
     req.log?.error(err, "Error submitting application");
     res.status(500).json({ error: "Internal server error" });
   }
