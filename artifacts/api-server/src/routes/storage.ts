@@ -6,7 +6,7 @@ import { requireOrgMembership } from "../middlewares/requireAuth";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
-router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", requireOrgMembership(), async (req: Request, res: Response) => {
   const { name, size, contentType } = req.body;
   if (!name || !contentType) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -58,12 +58,16 @@ router.get("/storage/objects/*path", requireOrgMembership(), async (req: Request
     const objectPath = `/objects/${wildcardPath}`;
 
     const orgId = req.auth_context!.organizationId;
-    if (wildcardPath.startsWith("resumes/")) {
-      const pathOrgId = wildcardPath.split("/")[1];
+    const pathSegments = wildcardPath.split("/");
+    if (pathSegments.length >= 2) {
+      const pathOrgId = pathSegments[1];
       if (pathOrgId !== orgId) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
+    } else {
+      res.status(403).json({ error: "Forbidden" });
+      return;
     }
 
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
