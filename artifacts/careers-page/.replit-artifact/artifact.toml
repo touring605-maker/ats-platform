@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/careers/"
+title = "LastATS Careers Page"
+version = "1.0.0"
+id = "artifacts/careers-page"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/careers/" ]
+localPort = 18259
+
+[services.development]
+run = "pnpm --filter @workspace/careers-page run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/careers-page", "run", "build" ]
+publicDir = "artifacts/careers-page/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18259"
+BASE_PATH = "/careers/"

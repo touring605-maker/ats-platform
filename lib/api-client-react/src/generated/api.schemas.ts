@@ -326,6 +326,66 @@ export interface CreateRating {
   comment?: string;
 }
 
+export interface PublicOrganization {
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  description?: string | null;
+  website?: string | null;
+}
+
+export interface PublicJob {
+  id: string;
+  title: string;
+  department?: string | null;
+  location?: string | null;
+  employmentType?: string | null;
+  isRemote?: boolean | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  salaryCurrency?: string | null;
+  publishedAt?: string | null;
+}
+
+export type PublicJobDetail = PublicJob & {
+  description?: string | null;
+  requirements?: string | null;
+  customFields?: CustomField[] | null;
+};
+
+export interface CareersFilters {
+  departments?: string[];
+  locations?: string[];
+}
+
+export interface CareersPageResponse {
+  organization: PublicOrganization;
+  jobs: PublicJob[];
+  filters: CareersFilters;
+}
+
+export interface JobDetailResponse {
+  organization: PublicOrganization;
+  job: PublicJobDetail;
+}
+
+export interface SubmitApplicationForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  linkedinUrl?: string;
+  coverLetter?: string;
+  resume?: Blob;
+  /** JSON string of custom field responses */
+  customFieldResponses?: string;
+}
+
+export interface ApplicationSubmitResponse {
+  message: string;
+  applicationId: string;
+}
+
 /**
  * Authentication required
  */
@@ -395,4 +455,11 @@ export type ListApplicationsParams = {
 
 export type UpdateApplicationStatusBody = {
   status: ApplicationStatus;
+};
+
+export type GetCareersPageParams = {
+  search?: string;
+  department?: string;
+  location?: string;
+  employmentType?: string;
 };

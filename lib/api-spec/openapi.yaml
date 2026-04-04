@@ -18,6 +18,8 @@ tags:
     description: Candidate profile management
   - name: applications
     description: Application tracking and management
+  - name: careers
+    description: Public careers page and application submission
 
 security:
   - clerkAuth: []
@@ -622,6 +624,118 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /careers/{orgSlug}:
+    get:
+      operationId: getCareersPage
+      tags: [careers]
+      summary: Public careers page - lists published jobs for an organization
+      security: []
+      parameters:
+        - name: orgSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: employmentType
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Careers page data with organization info and published jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CareersPageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /careers/{orgSlug}/jobs/{jobId}:
+    get:
+      operationId: getPublicJobDetail
+      tags: [careers]
+      summary: Public job detail page
+      security: []
+      parameters:
+        - name: orgSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Job detail with organization info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobDetailResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /careers/{orgSlug}/jobs/{jobId}/apply:
+    post:
+      operationId: submitApplication
+      tags: [careers]
+      summary: Submit a job application (public, no auth required)
+      security: []
+      parameters:
+        - name: orgSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/SubmitApplicationForm"
+      responses:
+        "201":
+          description: Application submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationSubmitResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Duplicate application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /applications/{id}/ratings:
     get:
@@ -1346,3 +1460,155 @@ components:
           type: string
       required:
         - rating
+
+    PublicOrganization:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+      required:
+        - name
+        - slug
+
+    PublicJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        department:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        employmentType:
+          type: string
+          nullable: true
+        isRemote:
+          type: boolean
+          nullable: true
+        salaryMin:
+          type: number
+          nullable: true
+        salaryMax:
+          type: number
+          nullable: true
+        salaryCurrency:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - title
+
+    PublicJobDetail:
+      allOf:
+        - $ref: "#/components/schemas/PublicJob"
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+            requirements:
+              type: string
+              nullable: true
+            customFields:
+              type: array
+              nullable: true
+              items:
+                $ref: "#/components/schemas/CustomField"
+
+    CareersFilters:
+      type: object
+      properties:
+        departments:
+          type: array
+          items:
+            type: string
+        locations:
+          type: array
+          items:
+            type: string
+
+    CareersPageResponse:
+      type: object
+      properties:
+        organization:
+          $ref: "#/components/schemas/PublicOrganization"
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicJob"
+        filters:
+          $ref: "#/components/schemas/CareersFilters"
+      required:
+        - organization
+        - jobs
+        - filters
+
+    JobDetailResponse:
+      type: object
+      properties:
+        organization:
+          $ref: "#/components/schemas/PublicOrganization"
+        job:
+          $ref: "#/components/schemas/PublicJobDetail"
+      required:
+        - organization
+        - job
+
+    SubmitApplicationForm:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        linkedinUrl:
+          type: string
+        coverLetter:
+          type: string
+        resume:
+          type: string
+          format: binary
+        customFieldResponses:
+          type: string
+          description: JSON string of custom field responses
+      required:
+        - firstName
+        - lastName
+        - email
+
+    ApplicationSubmitResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        applicationId:
+          type: string
+          format: uuid
+      required:
+        - message
+        - applicationId

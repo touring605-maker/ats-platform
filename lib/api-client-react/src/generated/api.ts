@@ -21,16 +21,21 @@ import type {
   Application,
   ApplicationDetail,
   ApplicationRating,
+  ApplicationSubmitResponse,
   Candidate,
+  CareersPageResponse,
   CreateApplication,
   CreateCandidate,
   CreateJob,
   CreateRating,
   CustomField,
   DashboardSummary,
+  Error,
   ForbiddenResponse,
+  GetCareersPageParams,
   HealthStatus,
   Job,
+  JobDetailResponse,
   JobStats,
   ListApplicationsParams,
   ListCandidatesParams,
@@ -42,6 +47,7 @@ import type {
   PaginatedApplications,
   PaginatedCandidates,
   PaginatedJobsWithCounts,
+  SubmitApplicationForm,
   UnauthorizedResponse,
   UpdateApplicationStatusBody,
   UpdateJob,
@@ -2343,6 +2349,335 @@ export const useUpdateApplicationStatus = <
   TContext
 > => {
   return useMutation(getUpdateApplicationStatusMutationOptions(options));
+};
+
+/**
+ * @summary Public careers page - lists published jobs for an organization
+ */
+export const getGetCareersPageUrl = (
+  orgSlug: string,
+  params?: GetCareersPageParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/careers/${orgSlug}?${stringifiedParams}`
+    : `/api/careers/${orgSlug}`;
+};
+
+export const getCareersPage = async (
+  orgSlug: string,
+  params?: GetCareersPageParams,
+  options?: RequestInit,
+): Promise<CareersPageResponse> => {
+  return customFetch<CareersPageResponse>(
+    getGetCareersPageUrl(orgSlug, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCareersPageQueryKey = (
+  orgSlug: string,
+  params?: GetCareersPageParams,
+) => {
+  return [`/api/careers/${orgSlug}`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCareersPageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCareersPage>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  orgSlug: string,
+  params?: GetCareersPageParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCareersPage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCareersPageQueryKey(orgSlug, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCareersPage>>> = ({
+    signal,
+  }) => getCareersPage(orgSlug, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!orgSlug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCareersPage>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCareersPageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCareersPage>>
+>;
+export type GetCareersPageQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary Public careers page - lists published jobs for an organization
+ */
+
+export function useGetCareersPage<
+  TData = Awaited<ReturnType<typeof getCareersPage>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  orgSlug: string,
+  params?: GetCareersPageParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCareersPage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCareersPageQueryOptions(orgSlug, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Public job detail page
+ */
+export const getGetPublicJobDetailUrl = (orgSlug: string, jobId: string) => {
+  return `/api/careers/${orgSlug}/jobs/${jobId}`;
+};
+
+export const getPublicJobDetail = async (
+  orgSlug: string,
+  jobId: string,
+  options?: RequestInit,
+): Promise<JobDetailResponse> => {
+  return customFetch<JobDetailResponse>(
+    getGetPublicJobDetailUrl(orgSlug, jobId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetPublicJobDetailQueryKey = (
+  orgSlug: string,
+  jobId: string,
+) => {
+  return [`/api/careers/${orgSlug}/jobs/${jobId}`] as const;
+};
+
+export const getGetPublicJobDetailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicJobDetail>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  orgSlug: string,
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicJobDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPublicJobDetailQueryKey(orgSlug, jobId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPublicJobDetail>>
+  > = ({ signal }) =>
+    getPublicJobDetail(orgSlug, jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(orgSlug && jobId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicJobDetail>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicJobDetailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicJobDetail>>
+>;
+export type GetPublicJobDetailQueryError = ErrorType<NotFoundResponse>;
+
+/**
+ * @summary Public job detail page
+ */
+
+export function useGetPublicJobDetail<
+  TData = Awaited<ReturnType<typeof getPublicJobDetail>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  orgSlug: string,
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicJobDetail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicJobDetailQueryOptions(
+    orgSlug,
+    jobId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit a job application (public, no auth required)
+ */
+export const getSubmitApplicationUrl = (orgSlug: string, jobId: string) => {
+  return `/api/careers/${orgSlug}/jobs/${jobId}/apply`;
+};
+
+export const submitApplication = async (
+  orgSlug: string,
+  jobId: string,
+  submitApplicationForm: SubmitApplicationForm,
+  options?: RequestInit,
+): Promise<ApplicationSubmitResponse> => {
+  const formData = new FormData();
+  formData.append(`firstName`, submitApplicationForm.firstName);
+  formData.append(`lastName`, submitApplicationForm.lastName);
+  formData.append(`email`, submitApplicationForm.email);
+  if (submitApplicationForm.phone !== undefined) {
+    formData.append(`phone`, submitApplicationForm.phone);
+  }
+  if (submitApplicationForm.linkedinUrl !== undefined) {
+    formData.append(`linkedinUrl`, submitApplicationForm.linkedinUrl);
+  }
+  if (submitApplicationForm.coverLetter !== undefined) {
+    formData.append(`coverLetter`, submitApplicationForm.coverLetter);
+  }
+  if (submitApplicationForm.resume !== undefined) {
+    formData.append(`resume`, submitApplicationForm.resume);
+  }
+  if (submitApplicationForm.customFieldResponses !== undefined) {
+    formData.append(
+      `customFieldResponses`,
+      submitApplicationForm.customFieldResponses,
+    );
+  }
+
+  return customFetch<ApplicationSubmitResponse>(
+    getSubmitApplicationUrl(orgSlug, jobId),
+    {
+      ...options,
+      method: "POST",
+      body: formData,
+    },
+  );
+};
+
+export const getSubmitApplicationMutationOptions = <
+  TError = ErrorType<Error | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitApplication>>,
+    TError,
+    { orgSlug: string; jobId: string; data: BodyType<SubmitApplicationForm> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitApplication>>,
+  TError,
+  { orgSlug: string; jobId: string; data: BodyType<SubmitApplicationForm> },
+  TContext
+> => {
+  const mutationKey = ["submitApplication"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitApplication>>,
+    { orgSlug: string; jobId: string; data: BodyType<SubmitApplicationForm> }
+  > = (props) => {
+    const { orgSlug, jobId, data } = props ?? {};
+
+    return submitApplication(orgSlug, jobId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitApplication>>
+>;
+export type SubmitApplicationMutationBody = BodyType<SubmitApplicationForm>;
+export type SubmitApplicationMutationError = ErrorType<
+  Error | NotFoundResponse
+>;
+
+/**
+ * @summary Submit a job application (public, no auth required)
+ */
+export const useSubmitApplication = <
+  TError = ErrorType<Error | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitApplication>>,
+    TError,
+    { orgSlug: string; jobId: string; data: BodyType<SubmitApplicationForm> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitApplication>>,
+  TError,
+  { orgSlug: string; jobId: string; data: BodyType<SubmitApplicationForm> },
+  TContext
+> => {
+  return useMutation(getSubmitApplicationMutationOptions(options));
 };
 
 /**

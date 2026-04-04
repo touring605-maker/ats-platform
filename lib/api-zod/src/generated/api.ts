@@ -992,6 +992,127 @@ export const UpdateApplicationStatusResponse = zod.object({
 });
 
 /**
+ * @summary Public careers page - lists published jobs for an organization
+ */
+export const GetCareersPageParams = zod.object({
+  orgSlug: zod.coerce.string(),
+});
+
+export const GetCareersPageQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+  department: zod.coerce.string().optional(),
+  location: zod.coerce.string().optional(),
+  employmentType: zod.coerce.string().optional(),
+});
+
+export const GetCareersPageResponse = zod.object({
+  organization: zod.object({
+    name: zod.string(),
+    slug: zod.string(),
+    logoUrl: zod.string().nullish(),
+    description: zod.string().nullish(),
+    website: zod.string().nullish(),
+  }),
+  jobs: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      title: zod.string(),
+      department: zod.string().nullish(),
+      location: zod.string().nullish(),
+      employmentType: zod.string().nullish(),
+      isRemote: zod.boolean().nullish(),
+      salaryMin: zod.number().nullish(),
+      salaryMax: zod.number().nullish(),
+      salaryCurrency: zod.string().nullish(),
+      publishedAt: zod.coerce.date().nullish(),
+    }),
+  ),
+  filters: zod.object({
+    departments: zod.array(zod.string()).optional(),
+    locations: zod.array(zod.string()).optional(),
+  }),
+});
+
+/**
+ * @summary Public job detail page
+ */
+export const GetPublicJobDetailParams = zod.object({
+  orgSlug: zod.coerce.string(),
+  jobId: zod.coerce.string().uuid(),
+});
+
+export const GetPublicJobDetailResponse = zod.object({
+  organization: zod.object({
+    name: zod.string(),
+    slug: zod.string(),
+    logoUrl: zod.string().nullish(),
+    description: zod.string().nullish(),
+    website: zod.string().nullish(),
+  }),
+  job: zod
+    .object({
+      id: zod.string().uuid(),
+      title: zod.string(),
+      department: zod.string().nullish(),
+      location: zod.string().nullish(),
+      employmentType: zod.string().nullish(),
+      isRemote: zod.boolean().nullish(),
+      salaryMin: zod.number().nullish(),
+      salaryMax: zod.number().nullish(),
+      salaryCurrency: zod.string().nullish(),
+      publishedAt: zod.coerce.date().nullish(),
+    })
+    .and(
+      zod.object({
+        description: zod.string().nullish(),
+        requirements: zod.string().nullish(),
+        customFields: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              type: zod.enum([
+                "text",
+                "textarea",
+                "select",
+                "checkbox",
+                "number",
+                "date",
+                "file",
+              ]),
+              required: zod.boolean(),
+              options: zod.array(zod.string()).optional(),
+              order: zod.number().optional(),
+            }),
+          )
+          .nullish(),
+      }),
+    ),
+});
+
+/**
+ * @summary Submit a job application (public, no auth required)
+ */
+export const SubmitApplicationParams = zod.object({
+  orgSlug: zod.coerce.string(),
+  jobId: zod.coerce.string().uuid(),
+});
+
+export const SubmitApplicationBody = zod.object({
+  firstName: zod.string(),
+  lastName: zod.string(),
+  email: zod.string().email(),
+  phone: zod.string().optional(),
+  linkedinUrl: zod.string().optional(),
+  coverLetter: zod.string().optional(),
+  resume: zod.instanceof(File).optional(),
+  customFieldResponses: zod
+    .string()
+    .optional()
+    .describe("JSON string of custom field responses"),
+});
+
+/**
  * @summary Get ratings for an application
  */
 export const GetApplicationRatingsParams = zod.object({
