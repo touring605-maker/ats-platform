@@ -214,10 +214,25 @@ router.post("/:orgSlug/jobs/:jobId/apply", upload.single("resume"), async (req, 
       return;
     }
 
+    let parsedResponses: Record<string, string> = {};
+    if (customFieldResponses) {
+      try {
+        parsedResponses = typeof customFieldResponses === "string"
+          ? JSON.parse(customFieldResponses)
+          : customFieldResponses;
+      } catch {
+        res.status(400).json({ error: "Invalid custom field responses format" });
+        return;
+      }
+      if (typeof parsedResponses !== "object" || parsedResponses === null || Array.isArray(parsedResponses)) {
+        res.status(400).json({ error: "Custom field responses must be a JSON object" });
+        return;
+      }
+    }
+
     if (job.customFields && Array.isArray(job.customFields)) {
-      const responses = customFieldResponses ? JSON.parse(typeof customFieldResponses === "string" ? customFieldResponses : JSON.stringify(customFieldResponses)) : {};
       for (const field of job.customFields as Array<{ id: string; label: string; required?: boolean }>) {
-        if (field.required && (!responses[field.id] || String(responses[field.id]).trim() === "")) {
+        if (field.required && (!parsedResponses[field.id] || String(parsedResponses[field.id]).trim() === "")) {
           res.status(400).json({ error: `${field.label} is required` });
           return;
         }
@@ -233,11 +248,14 @@ router.post("/:orgSlug/jobs/:jobId/apply", upload.single("resume"), async (req, 
         const privateDir = storageService.getPrivateObjectDir();
         const fullKey = `${privateDir}/${key}`;
 
-        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
-        const { Storage } = await import("@google-cloud/storage");
-        const storage = new Storage();
-        const bucket = storage.bucket(bucketId);
-        const file = bucket.file(fullKey);
+        const { objectStorageClient } = await import("../lib/objectStorage");
+        const { bucketName, objectName } = (() => {
+          const path = fullKey.startsWith("/") ? fullKey : `/${fullKey}`;
+          const parts = path.split("/");
+          return { bucketName: parts[1], objectName: parts.slice(2).join("/") };
+        })();
+        const bucket = objectStorageClient.bucket(bucketName);
+        const file = bucket.file(objectName);
         await file.save(req.file.buffer, {
           contentType: req.file.mimetype,
           metadata: {
@@ -250,13 +268,6 @@ router.post("/:orgSlug/jobs/:jobId/apply", upload.single("resume"), async (req, 
         res.status(500).json({ error: "Failed to upload resume" });
         return;
       }
-    }
-
-    let parsedResponses: Record<string, string> = {};
-    if (customFieldResponses) {
-      parsedResponses = typeof customFieldResponses === "string"
-        ? JSON.parse(customFieldResponses)
-        : customFieldResponses;
     }
 
     const existingCandidate = await db
