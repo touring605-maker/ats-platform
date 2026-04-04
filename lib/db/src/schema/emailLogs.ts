@@ -5,6 +5,7 @@ import { organizationsTable } from "./organizations";
 import { applicationsTable } from "./applications";
 import { candidatesTable } from "./candidates";
 import { emailTemplatesTable } from "./emailTemplates";
+import { usersTable } from "./users";
 
 export const emailStatusEnum = pgEnum("email_status", ["pending", "sent", "failed"]);
 
@@ -19,7 +20,7 @@ export const emailLogsTable = pgTable("email_logs", {
   htmlBody: text("html_body").notNull(),
   textBody: text("text_body"),
   status: emailStatusEnum("status").notNull().default("pending"),
-  sentBy: text("sent_by"),
+  sentBy: uuid("sent_by").references(() => usersTable.id),
   errorMessage: text("error_message"),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
 });

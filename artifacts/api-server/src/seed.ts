@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import {
   usersTable,
   organizationsTable,
@@ -15,42 +16,29 @@ async function seed() {
 
   const passwordHash = await bcrypt.hash("password123", 10);
 
-  const [adminUser] = await db
-    .insert(usersTable)
-    .values({
-      email: "admin@acme-corp.example.com",
-      passwordHash,
-      displayName: "Alex Admin",
-    })
-    .onConflictDoNothing()
-    .returning();
+  const userDefs = [
+    { email: "admin@acme-corp.example.com", displayName: "Alex Admin" },
+    { email: "manager@acme-corp.example.com", displayName: "Morgan Manager" },
+    { email: "viewer@acme-corp.example.com", displayName: "Val Viewer" },
+  ];
 
-  const [managerUser] = await db
-    .insert(usersTable)
-    .values({
-      email: "manager@acme-corp.example.com",
-      passwordHash,
-      displayName: "Morgan Manager",
-    })
-    .onConflictDoNothing()
-    .returning();
-
-  const [viewerUser] = await db
-    .insert(usersTable)
-    .values({
-      email: "viewer@acme-corp.example.com",
-      passwordHash,
-      displayName: "Val Viewer",
-    })
-    .onConflictDoNothing()
-    .returning();
-
-  if (!adminUser || !managerUser || !viewerUser) {
-    console.log("Users already exist, skipping seed.");
-    process.exit(0);
+  const users = [];
+  for (const def of userDefs) {
+    const [user] = await db
+      .insert(usersTable)
+      .values({ email: def.email, passwordHash, displayName: def.displayName })
+      .onConflictDoNothing()
+      .returning();
+    if (user) {
+      users.push(user);
+    } else {
+      const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, def.email)).limit(1);
+      users.push(existing);
+    }
   }
 
-  console.log("Created 3 users (password: password123)");
+  const [adminUser, managerUser, viewerUser] = users;
+  console.log("Ensured 3 users exist (password: password123)");
 
   const [org] = await db
     .insert(organizationsTable)

@@ -3,10 +3,22 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
 const PgStore = connectPgSimple(session);
+
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+pool.query(`
+  CREATE TABLE IF NOT EXISTS "session" (
+    "sid" varchar NOT NULL COLLATE "default",
+    "sess" json NOT NULL,
+    "expire" timestamp(6) NOT NULL,
+    CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+  );
+  CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+`).catch((err: Error) => logger.error(err, "Failed to ensure session table"));
 
 const app: Express = express();
 
@@ -50,8 +62,8 @@ app.set("trust proxy", 1);
 app.use(
   session({
     store: new PgStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
+      pool,
+      tableName: "session",
     }),
     secret: (() => {
       const secret = process.env.SESSION_SECRET;

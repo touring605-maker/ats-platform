@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, uuid, pgEnum, integer, jsonb, boolean } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { organizationsTable } from "./organizations";
+import { usersTable } from "./users";
 
 export const jobStatusEnum = pgEnum("job_status", ["draft", "published", "closed", "archived"]);
 export const employmentTypeEnum = pgEnum("employment_type", ["full_time", "part_time", "contract", "internship", "temporary"]);
@@ -22,7 +23,7 @@ export const jobsTable = pgTable("jobs", {
   customFields: jsonb("custom_fields").$type<CustomField[]>().default([]),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   closedAt: timestamp("closed_at", { withTimezone: true }),
-  createdBy: text("created_by").notNull(),
+  createdBy: uuid("created_by").notNull().references(() => usersTable.id),
   isRemote: boolean("is_remote").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

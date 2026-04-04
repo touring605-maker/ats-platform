@@ -2,11 +2,12 @@ import { pgTable, text, timestamp, uuid, integer, unique } from "drizzle-orm/pg-
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { applicationsTable } from "./applications";
+import { usersTable } from "./users";
 
 export const applicationRatingsTable = pgTable("application_ratings", {
   id: uuid("id").defaultRandom().primaryKey(),
   applicationId: uuid("application_id").notNull().references(() => applicationsTable.id, { onDelete: "cascade" }),
-  ratedBy: text("rated_by").notNull(),
+  ratedBy: uuid("rated_by").notNull().references(() => usersTable.id),
   rating: integer("rating").notNull(),
   comment: text("comment"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
