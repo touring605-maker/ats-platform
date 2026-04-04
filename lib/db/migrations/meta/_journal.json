@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775283076865,
-      "tag": "0000_initial_schema",
+      "when": 1775270893086,
+      "tag": "0000_busy_the_santerians",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775283222513,
+      "tag": "0001_auth_and_email",
       "breakpoints": true
     }
   ]
