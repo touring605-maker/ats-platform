@@ -40,7 +40,8 @@ async function seed() {
   const [adminUser, managerUser, viewerUser] = users;
   console.log("Ensured 3 users exist (password: password123)");
 
-  const [org] = await db
+  let org: typeof organizationsTable.$inferSelect;
+  const [insertedOrg] = await db
     .insert(organizationsTable)
     .values({
       name: "Acme Corporation",
@@ -51,40 +52,33 @@ async function seed() {
     .onConflictDoNothing()
     .returning();
 
-  if (!org) {
-    console.log("Demo org already exists, skipping seed.");
-    process.exit(0);
+  if (insertedOrg) {
+    org = insertedOrg;
+    console.log(`Created organization: ${org.name} (${org.id})`);
+  } else {
+    const [existing] = await db.select().from(organizationsTable).where(eq(organizationsTable.slug, "acme-corp")).limit(1);
+    org = existing;
+    console.log(`Organization already exists: ${org.name} (${org.id})`);
   }
 
-  console.log(`Created organization: ${org.name} (${org.id})`);
+  const memberDefs = [
+    { userId: adminUser.id, role: "admin" as const, displayName: "Alex Admin", email: "admin@acme-corp.example.com" },
+    { userId: managerUser.id, role: "hiring_manager" as const, displayName: "Morgan Manager", email: "manager@acme-corp.example.com" },
+    { userId: viewerUser.id, role: "viewer" as const, displayName: "Val Viewer", email: "viewer@acme-corp.example.com" },
+  ];
+  for (const m of memberDefs) {
+    await db
+      .insert(organizationMembersTable)
+      .values({ organizationId: org.id, ...m })
+      .onConflictDoNothing();
+  }
+  console.log("Ensured 3 organization members");
 
-  await db
-    .insert(organizationMembersTable)
-    .values([
-      {
-        organizationId: org.id,
-        userId: adminUser.id,
-        role: "admin",
-        displayName: "Alex Admin",
-        email: "admin@acme-corp.example.com",
-      },
-      {
-        organizationId: org.id,
-        userId: managerUser.id,
-        role: "hiring_manager",
-        displayName: "Morgan Manager",
-        email: "manager@acme-corp.example.com",
-      },
-      {
-        organizationId: org.id,
-        userId: viewerUser.id,
-        role: "viewer",
-        displayName: "Val Viewer",
-        email: "viewer@acme-corp.example.com",
-      },
-    ]);
-
-  console.log("Created 3 organization members");
+  const existingJobs = await db.select({ id: jobsTable.id }).from(jobsTable).where(eq(jobsTable.organizationId, org.id)).limit(1);
+  if (existingJobs.length > 0) {
+    console.log("Demo data already seeded (jobs exist), skipping remaining entities.");
+    process.exit(0);
+  }
 
   const jobs = await db
     .insert(jobsTable)

@@ -10,15 +10,18 @@ import { logger } from "./lib/logger";
 const PgStore = connectPgSimple(session);
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-pool.query(`
-  CREATE TABLE IF NOT EXISTS "session" (
-    "sid" varchar NOT NULL COLLATE "default",
-    "sess" json NOT NULL,
-    "expire" timestamp(6) NOT NULL,
-    CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
-  );
-  CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
-`).catch((err: Error) => logger.error(err, "Failed to ensure session table"));
+
+export async function ensureSessionTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+    );
+    CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+  `);
+}
 
 const app: Express = express();
 
