@@ -72,10 +72,11 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `GET/PATCH/DELETE /api/jobs/:id` — get/update/delete job
 - `GET/POST /api/candidates` — list/create candidates
 - `GET/PATCH/DELETE /api/candidates/:id` — get/update/delete candidate
-- `GET /api/applications` — list applications (filterable by jobId, status)
-- `GET /api/applications/:id` — get application detail with ratings
+- `GET /api/applications` — list applications (filterable by jobId, status, search, minRating, dateFrom, dateTo; sortable by appliedAt, candidateName, rating, status; includes avgRating/ratingCount)
+- `GET /api/applications/:id` — get application detail with ratings, candidate LinkedIn/source, job custom fields
 - `PATCH /api/applications/:id/status` — update application status
-- `GET/POST /api/applications/:id/ratings` — get/add ratings
+- `PATCH /api/applications/:id/notes` — update internal notes
+- `GET/POST /api/applications/:id/ratings` — get/add ratings (upsert per user)
 - `GET /api/careers/:orgSlug` — public careers page: org info + published jobs (no auth)
 - `GET /api/careers/:orgSlug/jobs/:jobId` — public job detail (no auth)
 - `POST /api/careers/:orgSlug/jobs/:jobId/apply` — submit application with resume upload (no auth, multipart/form-data)
@@ -90,7 +91,8 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `/jobs/:id` — Job detail with status management (publish/close/archive)
 - `/jobs/:id/edit` — Edit job form
 - `/candidates` — Candidates list with search
-- `/applications` — Applications list with status filter
+- `/applications` — Applications list with search, job filter, status filter, sortable columns (date/name/rating/status), rating display, pagination
+- `/applications/:id` — Application detail: candidate info, cover letter, custom field responses, resume download, internal notes, status updates, star rating with history
 - `/settings` — Organization settings (Clerk OrganizationProfile)
 
 ## Frontend Pages (careers-page)
