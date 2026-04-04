@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useApplication, useUpdateApplicationStatus, useAddRating, useUpdateApplicationNotes } from "@/hooks/use-api";
+import { useApplication, useUpdateApplicationStatus, useAddRating, useUpdateApplicationNotes, useResumeUrl } from "@/hooks/use-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +64,7 @@ function StarRatingInput({ value, onChange }: { value: number; onChange: (v: num
 
 export default function ApplicationDetail({ applicationId }: ApplicationDetailProps) {
   const { data: app, isLoading } = useApplication(applicationId);
+  const { data: resumeBlobUrl } = useResumeUrl(applicationId, app?.candidateResumeUrl);
   const updateStatus = useUpdateApplicationStatus();
   const addRating = useAddRating();
   const updateNotes = useUpdateApplicationNotes();
@@ -199,31 +200,31 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
                   <CardTitle className="text-base flex items-center gap-2">
                     <FileText className="w-4 h-4" /> Resume
                   </CardTitle>
-                  <div className="flex gap-2">
-                    <a
-                      href={`${import.meta.env.BASE_URL}api/storage${app.candidateResumeUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <ExternalLink className="w-3.5 h-3.5" /> Open
-                      </Button>
-                    </a>
-                    <a
-                      href={`${import.meta.env.BASE_URL}api/storage${app.candidateResumeUrl}`}
-                      download
-                    >
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <Download className="w-3.5 h-3.5" /> Download
-                      </Button>
-                    </a>
-                  </div>
+                  {resumeBlobUrl && (
+                    <div className="flex gap-2">
+                      <a href={resumeBlobUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <ExternalLink className="w-3.5 h-3.5" /> Open
+                        </Button>
+                      </a>
+                      <a href={resumeBlobUrl} download={app.candidateResumeUrl.split("/").pop() || "resume"}>
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <Download className="w-3.5 h-3.5" /> Download
+                        </Button>
+                      </a>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                {app.candidateResumeUrl.toLowerCase().endsWith(".pdf") ? (
+                {!resumeBlobUrl ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                    <span className="ml-2 text-sm text-gray-500">Loading resume...</span>
+                  </div>
+                ) : app.candidateResumeUrl.toLowerCase().endsWith(".pdf") ? (
                   <iframe
-                    src={`${import.meta.env.BASE_URL}api/storage${app.candidateResumeUrl}`}
+                    src={resumeBlobUrl}
                     className="w-full h-[500px] rounded-lg border"
                     title="Resume Preview"
                   />
@@ -233,7 +234,7 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-700">Uploaded Resume</p>
                       <p className="text-xs text-gray-500 truncate">{app.candidateResumeUrl.split("/").pop()}</p>
-                      <p className="text-xs text-gray-400 mt-1">Preview not available for this file type. Use Open or Download above.</p>
+                      <p className="text-xs text-gray-400 mt-1">Use Open or Download above to view this file.</p>
                     </div>
                   </div>
                 )}

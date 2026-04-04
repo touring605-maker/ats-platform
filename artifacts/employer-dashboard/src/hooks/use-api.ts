@@ -243,6 +243,26 @@ export function useAddRating() {
   });
 }
 
+export function useResumeUrl(applicationId: string | undefined, resumeUrl: string | null | undefined) {
+  const { getToken } = useAuth();
+
+  return useQuery({
+    queryKey: ["resume-blob", applicationId],
+    queryFn: async () => {
+      const token = await getToken();
+      const response = await fetch(
+        `${import.meta.env.BASE_URL}api/applications/${applicationId}/resume`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!response.ok) throw new Error("Failed to fetch resume");
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    },
+    enabled: !!applicationId && !!resumeUrl,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCandidates(params?: { search?: string; page?: number; limit?: number }) {
   const getHeaders = useOrgHeaders();
   const { organization } = useOrganization();

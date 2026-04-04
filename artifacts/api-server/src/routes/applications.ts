@@ -1,8 +1,10 @@
 import { Router } from "express";
+import { Readable } from "stream";
 import { db } from "@workspace/db";
-import { applicationsTable, applicationRatingsTable, candidatesTable, jobsTable } from "@workspace/db/schema";
+import { applicationsTable, applicationRatingsTable, candidatesTable, jobsTable, organizationMembersTable } from "@workspace/db/schema";
 import { eq, and, count, avg, desc, asc, gte, lte, sql, ilike, or } from "drizzle-orm";
-import { requireOrgMembership } from "../middlewares/requireAuth";
+import { requireAuth, requireOrgMembership } from "../middlewares/requireAuth";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
 const router = Router();
 
@@ -378,6 +380,66 @@ router.get("/:id/ratings", requireOrgMembership(), async (req, res) => {
     .orderBy(desc(applicationRatingsTable.createdAt));
 
   res.json(ratings);
+});
+
+router.get("/:id/resume", requireAuth, async (req, res) => {
+  const userId = req.userId!;
+  const id = req.params.id as string;
+
+  const [application] = await db
+    .select({
+      resumeUrl: candidatesTable.resumeUrl,
+      orgId: jobsTable.organizationId,
+    })
+    .from(applicationsTable)
+    .innerJoin(candidatesTable, eq(applicationsTable.candidateId, candidatesTable.id))
+    .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
+    .where(eq(applicationsTable.id, id))
+    .limit(1);
+
+  if (!application || !application.resumeUrl) {
+    res.status(404).json({ error: "Resume not found" });
+    return;
+  }
+
+  const [member] = await db
+    .select({ id: organizationMembersTable.id })
+    .from(organizationMembersTable)
+    .where(
+      and(
+        eq(organizationMembersTable.organizationId, application.orgId),
+        eq(organizationMembersTable.clerkUserId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!member) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  try {
+    const objectStorageService = new ObjectStorageService();
+    const objectFile = await objectStorageService.getObjectEntityFile(application.resumeUrl);
+    const response = await objectStorageService.downloadObject(objectFile);
+
+    res.status(response.status);
+    response.headers.forEach((value, key) => res.setHeader(key, value));
+
+    if (response.body) {
+      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+      nodeStream.pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (error) {
+    if (error instanceof ObjectNotFoundError) {
+      res.status(404).json({ error: "Resume file not found" });
+      return;
+    }
+    req.log.error({ err: error }, "Error serving resume");
+    res.status(500).json({ error: "Failed to serve resume" });
+  }
 });
 
 export default router;
