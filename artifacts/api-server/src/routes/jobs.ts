@@ -4,6 +4,18 @@ import { jobsTable, type InsertJob, type CustomField } from "@workspace/db/schem
 import { eq, and, ilike, count, sql, desc } from "drizzle-orm";
 import { requireOrgMembership } from "../middlewares/requireAuth";
 import { CreateJobBody, UpdateJobBody } from "@workspace/api-zod";
+import sanitizeHtml from "sanitize-html";
+
+const sanitizeOptions: sanitizeHtml.IOptions = {
+  allowedTags: ["b", "i", "em", "strong", "p", "br", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre"],
+  allowedAttributes: {},
+  disallowedTagsMode: "discard",
+};
+
+function sanitizeRichText(html: string | undefined | null): string {
+  if (!html) return "";
+  return sanitizeHtml(html, sanitizeOptions);
+}
 
 type JobStatus = "draft" | "published" | "closed" | "archived";
 const validJobStatuses: JobStatus[] = ["draft", "published", "closed", "archived"];
@@ -143,8 +155,8 @@ router.post("/", requireOrgMembership(["admin", "hiring_manager"]), async (req, 
       salaryMin,
       salaryMax,
       salaryCurrency,
-      description,
-      requirements,
+      description: sanitizeRichText(description),
+      requirements: sanitizeRichText(requirements),
       customFields,
       isRemote,
       organizationId,
@@ -186,8 +198,8 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
   if (salaryMin !== undefined) updateData.salaryMin = salaryMin;
   if (salaryMax !== undefined) updateData.salaryMax = salaryMax;
   if (salaryCurrency !== undefined) updateData.salaryCurrency = salaryCurrency;
-  if (description !== undefined) updateData.description = description;
-  if (requirements !== undefined) updateData.requirements = requirements;
+  if (description !== undefined) updateData.description = sanitizeRichText(description);
+  if (requirements !== undefined) updateData.requirements = sanitizeRichText(requirements);
   if (customFields !== undefined) updateData.customFields = customFields;
   if (isRemote !== undefined) updateData.isRemote = isRemote;
 

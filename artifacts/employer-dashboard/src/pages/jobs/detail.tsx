@@ -7,6 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Pencil, Trash2, Globe, Archive, Loader2 } from "lucide-react";
 import { statusColor, formatDate, formatSalary, formatEmploymentType } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import DOMPurify from "dompurify";
+
+function SafeHtml({ html, className }: { html: string; className?: string }) {
+  return <div className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
+}
 
 interface JobDetailProps {
   jobId: string;
@@ -121,7 +126,7 @@ export default function JobDetail({ jobId }: JobDetailProps) {
                 <CardTitle className="text-base">Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: job.description }} />
+                <SafeHtml className="prose prose-sm max-w-none text-gray-700" html={job.description} />
               </CardContent>
             </Card>
           )}
@@ -131,7 +136,7 @@ export default function JobDetail({ jobId }: JobDetailProps) {
                 <CardTitle className="text-base">Requirements</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: job.requirements }} />
+                <SafeHtml className="prose prose-sm max-w-none text-gray-700" html={job.requirements} />
               </CardContent>
             </Card>
           )}
