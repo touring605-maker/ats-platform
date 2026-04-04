@@ -41,13 +41,15 @@ export default function CareersLanding({ orgSlug }: CareersLandingProps) {
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
   const [location, setLocation] = useState("");
+  const [employmentType, setEmploymentType] = useState("");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["careers", orgSlug, search, department, location],
+    queryKey: ["careers", orgSlug, search, department, location, employmentType],
     queryFn: () => fetchCareersPage(orgSlug, {
       search: search || undefined,
       department: department || undefined,
       location: location || undefined,
+      employmentType: employmentType || undefined,
     }),
   });
 
@@ -139,6 +141,19 @@ export default function CareersLanding({ orgSlug }: CareersLandingProps) {
               </SelectContent>
             </Select>
           )}
+          <Select value={employmentType} onValueChange={(v) => setEmploymentType(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Job Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="full_time">Full Time</SelectItem>
+              <SelectItem value="part_time">Part Time</SelectItem>
+              <SelectItem value="contract">Contract</SelectItem>
+              <SelectItem value="internship">Internship</SelectItem>
+              <SelectItem value="temporary">Temporary</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {jobs.length === 0 ? (
