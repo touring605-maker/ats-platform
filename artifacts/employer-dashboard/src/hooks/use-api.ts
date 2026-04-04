@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, useOrganization } from "@clerk/clerk-react";
 import apiClient from "@/lib/api-config";
@@ -245,10 +246,15 @@ export function useAddRating() {
 
 export function useResumeUrl(applicationId: string | undefined, resumeUrl: string | null | undefined) {
   const { getToken } = useAuth();
+  const prevUrlRef = useRef<string | null>(null);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["resume-blob", applicationId],
     queryFn: async () => {
+      if (prevUrlRef.current) {
+        URL.revokeObjectURL(prevUrlRef.current);
+        prevUrlRef.current = null;
+      }
       const token = await getToken();
       const response = await fetch(
         `${import.meta.env.BASE_URL}api/applications/${applicationId}/resume`,
@@ -256,11 +262,24 @@ export function useResumeUrl(applicationId: string | undefined, resumeUrl: strin
       );
       if (!response.ok) throw new Error("Failed to fetch resume");
       const blob = await response.blob();
-      return URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      prevUrlRef.current = url;
+      return url;
     },
     enabled: !!applicationId && !!resumeUrl,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    return () => {
+      if (prevUrlRef.current) {
+        URL.revokeObjectURL(prevUrlRef.current);
+        prevUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  return query;
 }
 
 export function useCandidates(params?: { search?: string; page?: number; limit?: number }) {

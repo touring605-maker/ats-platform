@@ -661,6 +661,28 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /applications/{id}/resume:
+    get:
+      operationId: getApplicationResume
+      tags: [applications]
+      summary: Stream the candidate resume file (auth via Bearer token only)
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Resume file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /applications/{id}/notes:
     patch:
       operationId: updateApplicationNotes
