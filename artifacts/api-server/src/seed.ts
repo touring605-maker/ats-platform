@@ -74,207 +74,223 @@ async function seed() {
   }
   console.log("Ensured 3 organization members");
 
-  const existingJobs = await db.select({ id: jobsTable.id }).from(jobsTable).where(eq(jobsTable.organizationId, org.id)).limit(1);
+  const existingJobs = await db.select().from(jobsTable).where(eq(jobsTable.organizationId, org.id));
+  let jobs: (typeof jobsTable.$inferSelect)[];
   if (existingJobs.length > 0) {
-    console.log("Demo data already seeded (jobs exist), skipping remaining entities.");
-    process.exit(0);
+    jobs = existingJobs;
+    console.log(`Jobs already exist (${jobs.length}), skipping job creation`);
+  } else {
+    jobs = await db
+      .insert(jobsTable)
+      .values([
+        {
+          organizationId: org.id,
+          title: "Senior Full-Stack Engineer",
+          department: "Engineering",
+          location: "San Francisco, CA",
+          employmentType: "full_time",
+          salaryMin: 150000,
+          salaryMax: 200000,
+          salaryCurrency: "USD",
+          description: "We're looking for an experienced full-stack engineer to join our platform team.",
+          requirements: "5+ years experience with TypeScript, React, Node.js. Experience with PostgreSQL and cloud platforms.",
+          status: "published",
+          publishedAt: new Date(),
+          isRemote: true,
+          createdBy: adminUser.id,
+          customFields: [
+            { id: "yoe", label: "Years of Experience", type: "text", required: true, order: 0 },
+            { id: "portfolio", label: "Portfolio URL", type: "text", required: false, order: 1 },
+          ],
+        },
+        {
+          organizationId: org.id,
+          title: "Product Designer",
+          department: "Design",
+          location: "New York, NY",
+          employmentType: "full_time",
+          salaryMin: 120000,
+          salaryMax: 160000,
+          salaryCurrency: "USD",
+          description: "Join our design team to craft beautiful, intuitive user experiences.",
+          requirements: "3+ years product design experience. Proficiency in Figma. Strong portfolio.",
+          status: "published",
+          publishedAt: new Date(),
+          isRemote: false,
+          createdBy: adminUser.id,
+        },
+        {
+          organizationId: org.id,
+          title: "DevOps Engineer",
+          department: "Engineering",
+          location: "Remote",
+          employmentType: "full_time",
+          salaryMin: 140000,
+          salaryMax: 180000,
+          salaryCurrency: "USD",
+          description: "Help us build and maintain scalable infrastructure.",
+          requirements: "Experience with Kubernetes, Terraform, and CI/CD pipelines.",
+          status: "draft",
+          isRemote: true,
+          createdBy: managerUser.id,
+        },
+        {
+          organizationId: org.id,
+          title: "Marketing Intern",
+          department: "Marketing",
+          location: "San Francisco, CA",
+          employmentType: "internship",
+          salaryMin: 25,
+          salaryMax: 35,
+          salaryCurrency: "USD",
+          description: "Summer internship opportunity in our marketing department.",
+          requirements: "Currently enrolled in a marketing or business degree program.",
+          status: "closed",
+          publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          closedAt: new Date(),
+          isRemote: false,
+          createdBy: adminUser.id,
+        },
+      ])
+      .returning();
+    console.log(`Created ${jobs.length} jobs`);
   }
 
-  const jobs = await db
-    .insert(jobsTable)
-    .values([
-      {
-        organizationId: org.id,
-        title: "Senior Full-Stack Engineer",
-        department: "Engineering",
-        location: "San Francisco, CA",
-        employmentType: "full_time",
-        salaryMin: 150000,
-        salaryMax: 200000,
-        salaryCurrency: "USD",
-        description: "We're looking for an experienced full-stack engineer to join our platform team.",
-        requirements: "5+ years experience with TypeScript, React, Node.js. Experience with PostgreSQL and cloud platforms.",
-        status: "published",
-        publishedAt: new Date(),
-        isRemote: true,
-        createdBy: adminUser.id,
-        customFields: [
-          { id: "yoe", label: "Years of Experience", type: "text", required: true, order: 0 },
-          { id: "portfolio", label: "Portfolio URL", type: "text", required: false, order: 1 },
-        ],
-      },
-      {
-        organizationId: org.id,
-        title: "Product Designer",
-        department: "Design",
-        location: "New York, NY",
-        employmentType: "full_time",
-        salaryMin: 120000,
-        salaryMax: 160000,
-        salaryCurrency: "USD",
-        description: "Join our design team to craft beautiful, intuitive user experiences.",
-        requirements: "3+ years product design experience. Proficiency in Figma. Strong portfolio.",
-        status: "published",
-        publishedAt: new Date(),
-        isRemote: false,
-        createdBy: adminUser.id,
-      },
-      {
-        organizationId: org.id,
-        title: "DevOps Engineer",
-        department: "Engineering",
-        location: "Remote",
-        employmentType: "full_time",
-        salaryMin: 140000,
-        salaryMax: 180000,
-        salaryCurrency: "USD",
-        description: "Help us build and maintain scalable infrastructure.",
-        requirements: "Experience with Kubernetes, Terraform, and CI/CD pipelines.",
-        status: "draft",
-        isRemote: true,
-        createdBy: managerUser.id,
-      },
-      {
-        organizationId: org.id,
-        title: "Marketing Intern",
-        department: "Marketing",
-        location: "San Francisco, CA",
-        employmentType: "internship",
-        salaryMin: 25,
-        salaryMax: 35,
-        salaryCurrency: "USD",
-        description: "Summer internship opportunity in our marketing department.",
-        requirements: "Currently enrolled in a marketing or business degree program.",
-        status: "closed",
-        publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        closedAt: new Date(),
-        isRemote: false,
-        createdBy: adminUser.id,
-      },
-    ])
-    .returning();
+  const existingCandidates = await db.select().from(candidatesTable).where(eq(candidatesTable.organizationId, org.id));
+  let candidates: (typeof candidatesTable.$inferSelect)[];
+  if (existingCandidates.length > 0) {
+    candidates = existingCandidates;
+    console.log(`Candidates already exist (${candidates.length}), skipping candidate creation`);
+  } else {
+    candidates = await db
+      .insert(candidatesTable)
+      .values([
+        {
+          organizationId: org.id,
+          firstName: "Jane",
+          lastName: "Doe",
+          email: "jane.doe@example.com",
+          phone: "+1-555-0101",
+          source: "careers_page",
+        },
+        {
+          organizationId: org.id,
+          firstName: "John",
+          lastName: "Smith",
+          email: "john.smith@example.com",
+          phone: "+1-555-0102",
+          linkedinUrl: "https://linkedin.com/in/johnsmith",
+          source: "linkedin",
+        },
+        {
+          organizationId: org.id,
+          firstName: "Alice",
+          lastName: "Johnson",
+          email: "alice.j@example.com",
+          phone: "+1-555-0103",
+          source: "referral",
+        },
+        {
+          organizationId: org.id,
+          firstName: "Bob",
+          lastName: "Wilson",
+          email: "bob.wilson@example.com",
+          source: "indeed",
+        },
+        {
+          organizationId: org.id,
+          firstName: "Carol",
+          lastName: "Davis",
+          email: "carol.d@example.com",
+          phone: "+1-555-0105",
+          source: "careers_page",
+        },
+      ])
+      .returning();
+    console.log(`Created ${candidates.length} candidates`);
+  }
 
-  console.log(`Created ${jobs.length} jobs`);
+  const existingApps = await db.select().from(applicationsTable).where(eq(applicationsTable.jobId, jobs[0].id));
+  let applications: (typeof applicationsTable.$inferSelect)[];
+  if (existingApps.length > 0) {
+    applications = existingApps;
+    console.log(`Applications already exist (${applications.length}), skipping application creation`);
+  } else {
+    applications = await db
+      .insert(applicationsTable)
+      .values([
+        {
+          jobId: jobs[0].id,
+          candidateId: candidates[0].id,
+          status: "shortlisted",
+          customFieldResponses: { yoe: "7", portfolio: "https://janedoe.dev" },
+          coverLetter: "I'm passionate about building scalable platforms...",
+        },
+        {
+          jobId: jobs[0].id,
+          candidateId: candidates[1].id,
+          status: "reviewed",
+          customFieldResponses: { yoe: "5" },
+        },
+        {
+          jobId: jobs[0].id,
+          candidateId: candidates[2].id,
+          status: "new",
+          customFieldResponses: { yoe: "3", portfolio: "https://alicej.dev" },
+        },
+        {
+          jobId: jobs[1].id,
+          candidateId: candidates[3].id,
+          status: "new",
+          coverLetter: "I'm excited about the opportunity to join your design team...",
+        },
+        {
+          jobId: jobs[1].id,
+          candidateId: candidates[4].id,
+          status: "reviewed",
+        },
+        {
+          jobId: jobs[3].id,
+          candidateId: candidates[2].id,
+          status: "hired",
+        },
+      ])
+      .returning();
+    console.log(`Created ${applications.length} applications`);
+  }
 
-  const candidates = await db
-    .insert(candidatesTable)
-    .values([
+  const existingRatings = await db.select({ id: applicationRatingsTable.id }).from(applicationRatingsTable).limit(1);
+  if (existingRatings.length > 0) {
+    console.log("Ratings already exist, skipping rating creation");
+  } else {
+    await db.insert(applicationRatingsTable).values([
       {
-        organizationId: org.id,
-        firstName: "Jane",
-        lastName: "Doe",
-        email: "jane.doe@example.com",
-        phone: "+1-555-0101",
-        source: "careers_page",
+        applicationId: applications[0].id,
+        ratedBy: adminUser.id,
+        rating: 5,
+        comment: "Excellent candidate. Strong technical background.",
       },
       {
-        organizationId: org.id,
-        firstName: "John",
-        lastName: "Smith",
-        email: "john.smith@example.com",
-        phone: "+1-555-0102",
-        linkedinUrl: "https://linkedin.com/in/johnsmith",
-        source: "linkedin",
+        applicationId: applications[0].id,
+        ratedBy: managerUser.id,
+        rating: 4,
+        comment: "Good fit for the team.",
       },
       {
-        organizationId: org.id,
-        firstName: "Alice",
-        lastName: "Johnson",
-        email: "alice.j@example.com",
-        phone: "+1-555-0103",
-        source: "referral",
+        applicationId: applications[1].id,
+        ratedBy: adminUser.id,
+        rating: 3,
+        comment: "Meets minimum requirements.",
       },
       {
-        organizationId: org.id,
-        firstName: "Bob",
-        lastName: "Wilson",
-        email: "bob.wilson@example.com",
-        source: "indeed",
+        applicationId: applications[4].id,
+        ratedBy: managerUser.id,
+        rating: 4,
+        comment: "Strong design portfolio.",
       },
-      {
-        organizationId: org.id,
-        firstName: "Carol",
-        lastName: "Davis",
-        email: "carol.d@example.com",
-        phone: "+1-555-0105",
-        source: "careers_page",
-      },
-    ])
-    .returning();
-
-  console.log(`Created ${candidates.length} candidates`);
-
-  const applications = await db
-    .insert(applicationsTable)
-    .values([
-      {
-        jobId: jobs[0].id,
-        candidateId: candidates[0].id,
-        status: "shortlisted",
-        customFieldResponses: { yoe: "7", portfolio: "https://janedoe.dev" },
-        coverLetter: "I'm passionate about building scalable platforms...",
-      },
-      {
-        jobId: jobs[0].id,
-        candidateId: candidates[1].id,
-        status: "reviewed",
-        customFieldResponses: { yoe: "5" },
-      },
-      {
-        jobId: jobs[0].id,
-        candidateId: candidates[2].id,
-        status: "new",
-        customFieldResponses: { yoe: "3", portfolio: "https://alicej.dev" },
-      },
-      {
-        jobId: jobs[1].id,
-        candidateId: candidates[3].id,
-        status: "new",
-        coverLetter: "I'm excited about the opportunity to join your design team...",
-      },
-      {
-        jobId: jobs[1].id,
-        candidateId: candidates[4].id,
-        status: "reviewed",
-      },
-      {
-        jobId: jobs[3].id,
-        candidateId: candidates[2].id,
-        status: "hired",
-      },
-    ])
-    .returning();
-
-  console.log(`Created ${applications.length} applications`);
-
-  await db.insert(applicationRatingsTable).values([
-    {
-      applicationId: applications[0].id,
-      ratedBy: adminUser.id,
-      rating: 5,
-      comment: "Excellent candidate. Strong technical background.",
-    },
-    {
-      applicationId: applications[0].id,
-      ratedBy: managerUser.id,
-      rating: 4,
-      comment: "Good fit for the team.",
-    },
-    {
-      applicationId: applications[1].id,
-      ratedBy: adminUser.id,
-      rating: 3,
-      comment: "Meets minimum requirements.",
-    },
-    {
-      applicationId: applications[4].id,
-      ratedBy: managerUser.id,
-      rating: 4,
-      comment: "Strong design portfolio.",
-    },
-  ]);
-
-  console.log("Created application ratings");
+    ]);
+    console.log("Created application ratings");
+  }
   console.log("Seed complete!");
   process.exit(0);
 }

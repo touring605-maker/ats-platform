@@ -23,7 +23,7 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - **Dev bypass**: Quick Access panel on login page shows seeded personas (only in NODE_ENV=development, via GET /api/auth/personas)
 - **Tenant isolation**: `X-Organization-Id` header on all org-scoped requests, membership verified against `organization_members` table
 - **Roles**: admin, hiring_manager, viewer
-- **Session store**: PostgreSQL `session` table (created by connect-pg-simple or manually)
+- **Session store**: PostgreSQL `session` table (auto-created by `ensureSessionTable()` in app.ts before server listens)
 - **Demo credentials**: admin@acme-corp.example.com / password123, manager@acme-corp.example.com / password123, viewer@acme-corp.example.com / password123
 
 ## Database Tables
@@ -31,12 +31,12 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `organizations` — tenant/company records with slug, branding
 - `users` — user accounts with email, passwordHash, displayName
 - `organization_members` — maps users to orgs with roles (userId references users.id)
-- `jobs` — job postings with status lifecycle (draft→published→closed→archived), custom application form fields
+- `jobs` — job postings with status lifecycle (draft→published→closed→archived), custom application form fields, `createdBy` uuid FK → users
 - `candidates` — candidate profiles scoped to organization
 - `applications` — links candidates to jobs with status pipeline (new→reviewed→shortlisted→rejected/hired)
-- `application_ratings` — 1-5 star ratings per application per reviewer
+- `application_ratings` — 1-5 star ratings per application per reviewer, `ratedBy` uuid FK → users
 - `email_templates` — org-scoped email templates with merge field support (name, subject, htmlBody, textBody, mergeFields, isDefault)
-- `email_logs` — email send history linked to applications/candidates (toEmail, subject, htmlBody, status, sentBy, sentAt)
+- `email_logs` — email send history linked to applications/candidates (toEmail, subject, htmlBody, status, `sentBy` uuid FK → users, sentAt)
 
 ## GitHub Repository
 
