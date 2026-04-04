@@ -507,7 +507,7 @@ paths:
     get:
       operationId: listApplications
       tags: [applications]
-      summary: List applications
+      summary: List applications with filtering, sorting, and rating aggregation
       parameters:
         - $ref: "#/components/parameters/OrganizationIdHeader"
         - name: jobId
@@ -519,6 +519,42 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ApplicationStatus"
+        - name: search
+          in: query
+          description: Search by candidate name or email
+          schema:
+            type: string
+        - name: minRating
+          in: query
+          description: Minimum average rating filter
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          description: Filter applications from this date (ISO 8601)
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Filter applications up to this date (ISO 8601)
+          schema:
+            type: string
+            format: date
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [appliedAt, candidateName, rating, status]
+            default: appliedAt
+        - name: sortOrder
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
       responses:
@@ -616,6 +652,37 @@ paths:
       responses:
         "200":
           description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /applications/{id}/notes:
+    patch:
+      operationId: updateApplicationNotes
+      tags: [applications]
+      summary: Update application internal notes
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+              required:
+                - notes
+      responses:
+        "200":
+          description: Notes updated
           content:
             application/json:
               schema:
@@ -1318,11 +1385,29 @@ components:
             candidateResumeUrl:
               type: string
               nullable: true
+            candidateLinkedinUrl:
+              type: string
+              nullable: true
+            candidateSource:
+              type: string
+              nullable: true
             jobTitle:
               type: string
             jobDepartment:
               type: string
               nullable: true
+            jobCustomFields:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  label:
+                    type: string
+                  type:
+                    type: string
             ratings:
               type: array
               items:
@@ -1345,8 +1430,24 @@ components:
                     type: string
                   candidateEmail:
                     type: string
+                  candidatePhone:
+                    type: string
+                    nullable: true
+                  candidateResumeUrl:
+                    type: string
+                    nullable: true
                   jobTitle:
                     type: string
+                  jobDepartment:
+                    type: string
+                    nullable: true
+                  avgRating:
+                    type: string
+                    nullable: true
+                    description: Average rating as decimal string
+                  ratingCount:
+                    type: integer
+                    nullable: true
         pagination:
           $ref: "#/components/schemas/Pagination"
       required:

@@ -30,15 +30,9 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { statusColor, formatDate } from "@/lib/utils";
-import DOMPurify from "dompurify";
 
 interface ApplicationDetailProps {
   applicationId: string;
-}
-
-function SafeHtml({ html }: { html: string }) {
-  const clean = DOMPurify.sanitize(html);
-  return <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: clean }} />;
 }
 
 function StarRatingInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
