@@ -152,10 +152,18 @@ export const GetDashboardSummaryResponse = zod.object({
             zod.object({
               id: zod.string(),
               label: zod.string(),
-              type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+              type: zod.enum([
+                "text",
+                "textarea",
+                "select",
+                "checkbox",
+                "number",
+                "date",
+                "file",
+              ]),
               required: zod.boolean(),
               options: zod.array(zod.string()).optional(),
-              order: zod.number(),
+              order: zod.number().optional(),
             }),
           )
           .optional(),
@@ -247,10 +255,18 @@ export const ListJobsResponse = zod.object({
             zod.object({
               id: zod.string(),
               label: zod.string(),
-              type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+              type: zod.enum([
+                "text",
+                "textarea",
+                "select",
+                "checkbox",
+                "number",
+                "date",
+                "file",
+              ]),
               required: zod.boolean(),
               options: zod.array(zod.string()).optional(),
-              order: zod.number(),
+              order: zod.number().optional(),
             }),
           )
           .optional(),
@@ -302,10 +318,18 @@ export const CreateJobBody = zod.object({
       zod.object({
         id: zod.string(),
         label: zod.string(),
-        type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+        type: zod.enum([
+          "text",
+          "textarea",
+          "select",
+          "checkbox",
+          "number",
+          "date",
+          "file",
+        ]),
         required: zod.boolean(),
         options: zod.array(zod.string()).optional(),
-        order: zod.number(),
+        order: zod.number().optional(),
       }),
     )
     .optional(),
@@ -350,10 +374,18 @@ export const GetJobResponse = zod.object({
       zod.object({
         id: zod.string(),
         label: zod.string(),
-        type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+        type: zod.enum([
+          "text",
+          "textarea",
+          "select",
+          "checkbox",
+          "number",
+          "date",
+          "file",
+        ]),
         required: zod.boolean(),
         options: zod.array(zod.string()).optional(),
-        order: zod.number(),
+        order: zod.number().optional(),
       }),
     )
     .optional(),
@@ -397,10 +429,18 @@ export const UpdateJobBody = zod.object({
       zod.object({
         id: zod.string(),
         label: zod.string(),
-        type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+        type: zod.enum([
+          "text",
+          "textarea",
+          "select",
+          "checkbox",
+          "number",
+          "date",
+          "file",
+        ]),
         required: zod.boolean(),
         options: zod.array(zod.string()).optional(),
-        order: zod.number(),
+        order: zod.number().optional(),
       }),
     )
     .optional(),
@@ -431,10 +471,18 @@ export const UpdateJobResponse = zod.object({
       zod.object({
         id: zod.string(),
         label: zod.string(),
-        type: zod.enum(["text", "textarea", "select", "file", "boolean"]),
+        type: zod.enum([
+          "text",
+          "textarea",
+          "select",
+          "checkbox",
+          "number",
+          "date",
+          "file",
+        ]),
         required: zod.boolean(),
         options: zod.array(zod.string()).optional(),
-        order: zod.number(),
+        order: zod.number().optional(),
       }),
     )
     .optional(),
@@ -459,6 +507,158 @@ export const DeleteJobHeader = zod.object({
     .uuid()
     .describe("The organization context for this request"),
 });
+
+/**
+ * @summary List custom form fields for a job
+ */
+export const ListJobFormFieldsParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ListJobFormFieldsHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const ListJobFormFieldsResponseItem = zod.object({
+  id: zod.string(),
+  label: zod.string(),
+  type: zod.enum([
+    "text",
+    "textarea",
+    "select",
+    "checkbox",
+    "number",
+    "date",
+    "file",
+  ]),
+  required: zod.boolean(),
+  options: zod.array(zod.string()).optional(),
+  order: zod.number().optional(),
+});
+export const ListJobFormFieldsResponse = zod.array(
+  ListJobFormFieldsResponseItem,
+);
+
+/**
+ * @summary Replace all custom form fields for a job (supports reordering)
+ */
+export const ReplaceJobFormFieldsParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ReplaceJobFormFieldsHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const ReplaceJobFormFieldsBodyItem = zod.object({
+  id: zod.string(),
+  label: zod.string(),
+  type: zod.enum([
+    "text",
+    "textarea",
+    "select",
+    "checkbox",
+    "number",
+    "date",
+    "file",
+  ]),
+  required: zod.boolean(),
+  options: zod.array(zod.string()).optional(),
+  order: zod.number().optional(),
+});
+export const ReplaceJobFormFieldsBody = zod.array(ReplaceJobFormFieldsBodyItem);
+
+export const ReplaceJobFormFieldsResponseItem = zod.object({
+  id: zod.string(),
+  label: zod.string(),
+  type: zod.enum([
+    "text",
+    "textarea",
+    "select",
+    "checkbox",
+    "number",
+    "date",
+    "file",
+  ]),
+  required: zod.boolean(),
+  options: zod.array(zod.string()).optional(),
+  order: zod.number().optional(),
+});
+export const ReplaceJobFormFieldsResponse = zod.array(
+  ReplaceJobFormFieldsResponseItem,
+);
+
+/**
+ * @summary Add a custom form field to a job
+ */
+export const AddJobFormFieldParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const AddJobFormFieldHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const AddJobFormFieldBody = zod.object({
+  id: zod.string(),
+  label: zod.string(),
+  type: zod.enum([
+    "text",
+    "textarea",
+    "select",
+    "checkbox",
+    "number",
+    "date",
+    "file",
+  ]),
+  required: zod.boolean(),
+  options: zod.array(zod.string()).optional(),
+  order: zod.number().optional(),
+});
+
+/**
+ * @summary Remove a custom form field from a job
+ */
+export const DeleteJobFormFieldParams = zod.object({
+  id: zod.coerce.string().uuid(),
+  fieldId: zod.coerce.string(),
+});
+
+export const DeleteJobFormFieldHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const DeleteJobFormFieldResponseItem = zod.object({
+  id: zod.string(),
+  label: zod.string(),
+  type: zod.enum([
+    "text",
+    "textarea",
+    "select",
+    "checkbox",
+    "number",
+    "date",
+    "file",
+  ]),
+  required: zod.boolean(),
+  options: zod.array(zod.string()).optional(),
+  order: zod.number().optional(),
+});
+export const DeleteJobFormFieldResponse = zod.array(
+  DeleteJobFormFieldResponseItem,
+);
 
 /**
  * @summary List candidates

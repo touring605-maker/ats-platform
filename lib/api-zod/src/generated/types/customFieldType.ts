@@ -13,6 +13,8 @@ export const CustomFieldType = {
   text: "text",
   textarea: "textarea",
   select: "select",
+  checkbox: "checkbox",
+  number: "number",
+  date: "date",
   file: "file",
-  boolean: "boolean",
 } as const;

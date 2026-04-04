@@ -89,6 +89,12 @@ export default function JobDetail({ jobId }: JobDetailProps) {
               Close
             </Button>
           )}
+          {job.status === "closed" && (
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleStatusChange("published")} disabled={updateJob.isPending}>
+              {updateJob.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4 mr-1" />}
+              Reopen
+            </Button>
+          )}
           {(job.status === "closed" || job.status === "draft") && (
             <Button size="sm" variant="outline" onClick={() => handleStatusChange("archived")} disabled={updateJob.isPending}>
               <Archive className="w-4 h-4 mr-1" />

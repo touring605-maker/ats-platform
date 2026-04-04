@@ -281,6 +281,117 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /jobs/{id}/form-fields:
+    get:
+      operationId: listJobFormFields
+      tags: [jobs]
+      summary: List custom form fields for a job
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: List of custom form fields
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomField"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      operationId: replaceJobFormFields
+      tags: [jobs]
+      summary: Replace all custom form fields for a job (supports reordering)
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/CustomField"
+      responses:
+        "200":
+          description: Updated list of custom form fields
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomField"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      operationId: addJobFormField
+      tags: [jobs]
+      summary: Add a custom form field to a job
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomField"
+      responses:
+        "201":
+          description: Form field added
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomField"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /jobs/{id}/form-fields/{fieldId}:
+    delete:
+      operationId: deleteJobFormField
+      tags: [jobs]
+      summary: Remove a custom form field from a job
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+        - name: fieldId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Form field removed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomField"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /candidates:
     get:
       operationId: listCandidates
@@ -730,7 +841,7 @@ components:
           type: string
         type:
           type: string
-          enum: [text, textarea, select, file, boolean]
+          enum: [text, textarea, select, checkbox, number, date, file]
         required:
           type: boolean
         options:
@@ -744,7 +855,6 @@ components:
         - label
         - type
         - required
-        - order
 
     Job:
       type: object

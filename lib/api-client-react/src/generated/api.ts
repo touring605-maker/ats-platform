@@ -26,6 +26,7 @@ import type {
   CreateCandidate,
   CreateJob,
   CreateRating,
+  CustomField,
   DashboardSummary,
   ForbiddenResponse,
   HealthStatus,
@@ -1066,6 +1067,372 @@ export const useDeleteJob = <
   TContext
 > => {
   return useMutation(getDeleteJobMutationOptions(options));
+};
+
+/**
+ * @summary List custom form fields for a job
+ */
+export const getListJobFormFieldsUrl = (id: string) => {
+  return `/api/jobs/${id}/form-fields`;
+};
+
+export const listJobFormFields = async (
+  id: string,
+  options?: RequestInit,
+): Promise<CustomField[]> => {
+  return customFetch<CustomField[]>(getListJobFormFieldsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListJobFormFieldsQueryKey = (id: string) => {
+  return [`/api/jobs/${id}/form-fields`] as const;
+};
+
+export const getListJobFormFieldsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listJobFormFields>>,
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listJobFormFields>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListJobFormFieldsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listJobFormFields>>
+  > = ({ signal }) => listJobFormFields(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listJobFormFields>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListJobFormFieldsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listJobFormFields>>
+>;
+export type ListJobFormFieldsQueryError = ErrorType<
+  UnauthorizedResponse | NotFoundResponse
+>;
+
+/**
+ * @summary List custom form fields for a job
+ */
+
+export function useListJobFormFields<
+  TData = Awaited<ReturnType<typeof listJobFormFields>>,
+  TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listJobFormFields>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListJobFormFieldsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Replace all custom form fields for a job (supports reordering)
+ */
+export const getReplaceJobFormFieldsUrl = (id: string) => {
+  return `/api/jobs/${id}/form-fields`;
+};
+
+export const replaceJobFormFields = async (
+  id: string,
+  customField: CustomField[],
+  options?: RequestInit,
+): Promise<CustomField[]> => {
+  return customFetch<CustomField[]>(getReplaceJobFormFieldsUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(customField),
+  });
+};
+
+export const getReplaceJobFormFieldsMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replaceJobFormFields>>,
+    TError,
+    { id: string; data: BodyType<CustomField[]> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replaceJobFormFields>>,
+  TError,
+  { id: string; data: BodyType<CustomField[]> },
+  TContext
+> => {
+  const mutationKey = ["replaceJobFormFields"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replaceJobFormFields>>,
+    { id: string; data: BodyType<CustomField[]> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return replaceJobFormFields(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplaceJobFormFieldsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replaceJobFormFields>>
+>;
+export type ReplaceJobFormFieldsMutationBody = BodyType<CustomField[]>;
+export type ReplaceJobFormFieldsMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Replace all custom form fields for a job (supports reordering)
+ */
+export const useReplaceJobFormFields = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replaceJobFormFields>>,
+    TError,
+    { id: string; data: BodyType<CustomField[]> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof replaceJobFormFields>>,
+  TError,
+  { id: string; data: BodyType<CustomField[]> },
+  TContext
+> => {
+  return useMutation(getReplaceJobFormFieldsMutationOptions(options));
+};
+
+/**
+ * @summary Add a custom form field to a job
+ */
+export const getAddJobFormFieldUrl = (id: string) => {
+  return `/api/jobs/${id}/form-fields`;
+};
+
+export const addJobFormField = async (
+  id: string,
+  customField: CustomField,
+  options?: RequestInit,
+): Promise<CustomField[]> => {
+  return customFetch<CustomField[]>(getAddJobFormFieldUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(customField),
+  });
+};
+
+export const getAddJobFormFieldMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addJobFormField>>,
+    TError,
+    { id: string; data: BodyType<CustomField> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addJobFormField>>,
+  TError,
+  { id: string; data: BodyType<CustomField> },
+  TContext
+> => {
+  const mutationKey = ["addJobFormField"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addJobFormField>>,
+    { id: string; data: BodyType<CustomField> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addJobFormField(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddJobFormFieldMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addJobFormField>>
+>;
+export type AddJobFormFieldMutationBody = BodyType<CustomField>;
+export type AddJobFormFieldMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Add a custom form field to a job
+ */
+export const useAddJobFormField = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addJobFormField>>,
+    TError,
+    { id: string; data: BodyType<CustomField> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addJobFormField>>,
+  TError,
+  { id: string; data: BodyType<CustomField> },
+  TContext
+> => {
+  return useMutation(getAddJobFormFieldMutationOptions(options));
+};
+
+/**
+ * @summary Remove a custom form field from a job
+ */
+export const getDeleteJobFormFieldUrl = (id: string, fieldId: string) => {
+  return `/api/jobs/${id}/form-fields/${fieldId}`;
+};
+
+export const deleteJobFormField = async (
+  id: string,
+  fieldId: string,
+  options?: RequestInit,
+): Promise<CustomField[]> => {
+  return customFetch<CustomField[]>(getDeleteJobFormFieldUrl(id, fieldId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteJobFormFieldMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteJobFormField>>,
+    TError,
+    { id: string; fieldId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteJobFormField>>,
+  TError,
+  { id: string; fieldId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteJobFormField"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteJobFormField>>,
+    { id: string; fieldId: string }
+  > = (props) => {
+    const { id, fieldId } = props ?? {};
+
+    return deleteJobFormField(id, fieldId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteJobFormFieldMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteJobFormField>>
+>;
+
+export type DeleteJobFormFieldMutationError = ErrorType<
+  UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Remove a custom form field from a job
+ */
+export const useDeleteJobFormField = <
+  TError = ErrorType<
+    UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteJobFormField>>,
+    TError,
+    { id: string; fieldId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteJobFormField>>,
+  TError,
+  { id: string; fieldId: string },
+  TContext
+> => {
+  return useMutation(getDeleteJobFormFieldMutationOptions(options));
 };
 
 /**

@@ -68,7 +68,9 @@ export default function JobForm({ jobId }: JobFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validFields = customFields.filter((f) => f.label.trim());
+    const validFields = customFields
+      .filter((f) => f.label.trim())
+      .map((f, i) => ({ ...f, order: i }));
 
     const body = {
       title: form.title,

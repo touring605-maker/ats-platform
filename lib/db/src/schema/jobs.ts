@@ -31,10 +31,10 @@ export const jobsTable = pgTable("jobs", {
 export interface CustomField {
   id: string;
   label: string;
-  type: "text" | "textarea" | "select" | "file" | "boolean";
+  type: "text" | "textarea" | "select" | "checkbox" | "number" | "date" | "file";
   required: boolean;
   options?: string[];
-  order: number;
+  order?: number;
 }
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true, updatedAt: true, publishedAt: true, closedAt: true });

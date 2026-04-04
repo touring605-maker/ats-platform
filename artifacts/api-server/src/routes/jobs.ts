@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { jobsTable, type InsertJob } from "@workspace/db/schema";
+import { jobsTable, type InsertJob, type CustomField } from "@workspace/db/schema";
 import { eq, and, ilike, count, sql, desc } from "drizzle-orm";
 import { requireOrgMembership } from "../middlewares/requireAuth";
 import { CreateJobBody, UpdateJobBody } from "@workspace/api-zod";
@@ -193,8 +193,11 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
 
   if (status !== undefined && validJobStatuses.includes(status)) {
     updateData.status = status;
-    if (status === "published" && existing.status === "draft") {
+    if (status === "published" && (existing.status === "draft" || existing.status === "closed")) {
       updateData.publishedAt = new Date();
+      if (existing.status === "closed") {
+        updateData.closedAt = null as unknown as Date;
+      }
     }
     if (status === "closed" && existing.status === "published") {
       updateData.closedAt = new Date();
@@ -208,6 +211,108 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
     .returning();
 
   res.json(job);
+});
+
+router.get("/:id/form-fields", requireOrgMembership(), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const id = req.params.id as string;
+
+  const [job] = await db
+    .select({ customFields: jobsTable.customFields })
+    .from(jobsTable)
+    .where(and(eq(jobsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!job) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  res.json(job.customFields || []);
+});
+
+router.put("/:id/form-fields", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const id = req.params.id as string;
+
+  const fields = req.body;
+  if (!Array.isArray(fields)) {
+    res.status(400).json({ error: "Body must be an array of form fields" });
+    return;
+  }
+
+  const fieldsWithOrder: CustomField[] = fields.map((f: CustomField, i: number) => ({ ...f, order: i }));
+
+  const [job] = await db
+    .update(jobsTable)
+    .set({ customFields: fieldsWithOrder })
+    .where(and(eq(jobsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .returning();
+
+  if (!job) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  res.json(job.customFields || []);
+});
+
+router.post("/:id/form-fields", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const id = req.params.id as string;
+
+  const [existing] = await db
+    .select({ customFields: jobsTable.customFields })
+    .from(jobsTable)
+    .where(and(eq(jobsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!existing) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  const currentFields: CustomField[] = existing.customFields || [];
+  const newField: CustomField = { ...req.body, order: currentFields.length };
+  const updatedFields: CustomField[] = [...currentFields, newField];
+
+  const [job] = await db
+    .update(jobsTable)
+    .set({ customFields: updatedFields })
+    .where(and(eq(jobsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .returning();
+
+  res.status(201).json(job!.customFields || []);
+});
+
+router.delete("/:id/form-fields/:fieldId", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const id = req.params.id as string;
+  const fieldId = req.params.fieldId as string;
+
+  const [existing] = await db
+    .select({ customFields: jobsTable.customFields })
+    .from(jobsTable)
+    .where(and(eq(jobsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!existing) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  const currentFields: CustomField[] = existing.customFields || [];
+  const updatedFields: CustomField[] = currentFields
+    .filter((f) => f.id !== fieldId)
+    .map((f, i) => ({ ...f, order: i }));
+
+  const [job] = await db
+    .update(jobsTable)
+    .set({ customFields: updatedFields })
+    .where(and(eq(jobsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .returning();
+
+  res.json(job!.customFields || []);
 });
 
 router.delete("/:id", requireOrgMembership(["admin"]), async (req, res) => {

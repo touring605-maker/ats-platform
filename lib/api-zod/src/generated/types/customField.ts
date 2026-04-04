@@ -13,5 +13,5 @@ export interface CustomField {
   type: CustomFieldType;
   required: boolean;
   options?: string[];
-  order: number;
+  order?: number;
 }
