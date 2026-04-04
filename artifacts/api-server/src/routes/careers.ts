@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { organizationsTable, jobsTable, candidatesTable, applicationsTable } from "@workspace/db/schema";
+import { organizationsTable, jobsTable, candidatesTable, applicationsTable, emailTemplatesTable, organizationMembersTable } from "@workspace/db/schema";
 import { eq, and, ilike, or, sql, desc } from "drizzle-orm";
 import multer from "multer";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { sendAndLogEmail, renderTemplate } from "../lib/emailService";
 
 const router = Router();
 
@@ -357,6 +358,69 @@ router.post("/:orgSlug/jobs/:jobId/apply", (req, res, next) => {
       message: "Application submitted successfully",
       applicationId: application.id,
     });
+
+    const mergeData: Record<string, string> = {
+      candidateName: `${firstName} ${lastName}`,
+      candidateEmail: email,
+      jobTitle: job.title,
+      companyName: org.name,
+    };
+
+    (async () => {
+      try {
+        const templates = await db
+          .select()
+          .from(emailTemplatesTable)
+          .where(and(
+            eq(emailTemplatesTable.organizationId, org.id),
+            eq(emailTemplatesTable.isDefault, true)
+          ));
+
+        const confirmationTemplate = templates.find(t => t.slug === "application_confirmation");
+        if (confirmationTemplate) {
+          await sendAndLogEmail({
+            organizationId: org.id,
+            applicationId: application.id,
+            candidateId: candidateId,
+            templateId: confirmationTemplate.id,
+            toEmail: email,
+            subject: renderTemplate(confirmationTemplate.subject, mergeData),
+            htmlBody: renderTemplate(confirmationTemplate.htmlBody, mergeData),
+            textBody: confirmationTemplate.textBody ? renderTemplate(confirmationTemplate.textBody, mergeData) : undefined,
+            sentBy: "system",
+          });
+        }
+
+        const receivedTemplate = templates.find(t => t.slug === "application_received");
+        if (receivedTemplate) {
+          const admins = await db
+            .select({ email: organizationMembersTable.email })
+            .from(organizationMembersTable)
+            .where(and(
+              eq(organizationMembersTable.organizationId, org.id),
+              eq(organizationMembersTable.role, "admin")
+            ));
+
+          for (const admin of admins) {
+            if (admin.email) {
+              await sendAndLogEmail({
+                organizationId: org.id,
+                applicationId: application.id,
+                candidateId: candidateId,
+                templateId: receivedTemplate.id,
+                toEmail: admin.email,
+                subject: renderTemplate(receivedTemplate.subject, mergeData),
+                htmlBody: renderTemplate(receivedTemplate.htmlBody, mergeData),
+                textBody: receivedTemplate.textBody ? renderTemplate(receivedTemplate.textBody, mergeData) : undefined,
+                sentBy: "system",
+              });
+            }
+          }
+        }
+      } catch (notifyErr) {
+        req.log?.error(notifyErr, "Error sending application notification emails");
+      }
+    })();
   } catch (err) {
     req.log?.error(err, "Error submitting application");
     res.status(500).json({ error: "Internal server error" });

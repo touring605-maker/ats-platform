@@ -176,9 +176,9 @@ export function useUpdateApplicationStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, notifyCandidate }: { id: string; status: string; notifyCandidate?: boolean }) => {
       const headers = await getHeaders();
-      const { data } = await apiClient.patch(`/applications/${id}/status`, { status }, { headers });
+      const { data } = await apiClient.patch(`/applications/${id}/status`, { status, notifyCandidate }, { headers });
       return data;
     },
     onSuccess: () => {
@@ -294,5 +294,151 @@ export function useCandidates(params?: { search?: string; page?: number; limit?:
       return data;
     },
     enabled: !!organization?.id,
+  });
+}
+
+export function useEmailTemplates() {
+  const getHeaders = useOrgHeaders();
+  const { organization } = useOrganization();
+
+  return useQuery({
+    queryKey: ["email-templates", organization?.id],
+    queryFn: async () => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.get("/email-templates", { headers });
+      return data as Array<{
+        id: string;
+        name: string;
+        slug: string;
+        subject: string;
+        htmlBody: string;
+        textBody: string | null;
+        mergeFields: string[];
+        isDefault: boolean;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useSeedDefaultTemplates() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.get("/email-templates/seed-defaults", { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+    },
+  });
+}
+
+export function useCreateEmailTemplate() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (template: { name: string; subject: string; htmlBody: string; textBody?: string; mergeFields?: string[] }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.post("/email-templates", template, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+    },
+  });
+}
+
+export function useUpdateEmailTemplate() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...template }: { id: string; name?: string; subject?: string; htmlBody?: string; textBody?: string; mergeFields?: string[] }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.put(`/email-templates/${id}`, template, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+    },
+  });
+}
+
+export function useDeleteEmailTemplate() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.delete(`/email-templates/${id}`, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+    },
+  });
+}
+
+export function useSendEmail() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ applicationId, ...body }: { applicationId: string; templateId?: string; subject: string; htmlBody: string; textBody?: string }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.post(`/applications/${applicationId}/email`, body, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-history"] });
+    },
+  });
+}
+
+export function useBulkEmail() {
+  const getHeaders = useOrgHeaders();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: { applicationIds: string[]; templateId?: string; subject: string; htmlBody: string; textBody?: string }) => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.post("/applications/bulk-email", body, { headers });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-history"] });
+    },
+  });
+}
+
+export function useEmailHistory(applicationId: string | undefined) {
+  const getHeaders = useOrgHeaders();
+  const { organization } = useOrganization();
+
+  return useQuery({
+    queryKey: ["email-history", organization?.id, applicationId],
+    queryFn: async () => {
+      const headers = await getHeaders();
+      const { data } = await apiClient.get(`/applications/${applicationId}/emails`, { headers });
+      return data as Array<{
+        id: string;
+        toEmail: string;
+        subject: string;
+        htmlBody: string;
+        status: string;
+        sentBy: string | null;
+        sentAt: string;
+        errorMessage: string | null;
+      }>;
+    },
+    enabled: !!organization?.id && !!applicationId,
   });
 }

@@ -810,8 +810,10 @@ export const DeleteCandidateHeader = zod.object({
 });
 
 /**
- * @summary List applications
+ * @summary List applications with filtering, sorting, and rating aggregation
  */
+export const listApplicationsQuerySortByDefault = `appliedAt`;
+export const listApplicationsQuerySortOrderDefault = `desc`;
 export const listApplicationsQueryPageDefault = 1;
 
 export const listApplicationsQueryLimitDefault = 20;
@@ -822,6 +824,30 @@ export const ListApplicationsQueryParams = zod.object({
   status: zod
     .enum(["new", "reviewed", "shortlisted", "rejected", "hired"])
     .optional(),
+  search: zod.coerce
+    .string()
+    .optional()
+    .describe("Search by candidate name or email"),
+  minRating: zod.coerce
+    .string()
+    .optional()
+    .describe("Minimum average rating filter"),
+  dateFrom: zod
+    .date()
+    .optional()
+    .describe("Filter applications from this date (ISO 8601)"),
+  dateTo: zod
+    .date()
+    .optional()
+    .describe("Filter applications up to this date (ISO 8601)"),
+  sortBy: zod
+    .enum(["appliedAt", "candidateName", "rating", "status"])
+    .default(listApplicationsQuerySortByDefault)
+    .describe("Sort field"),
+  sortOrder: zod
+    .enum(["asc", "desc"])
+    .default(listApplicationsQuerySortOrderDefault)
+    .describe("Sort direction"),
   page: zod.coerce.number().min(1).default(listApplicationsQueryPageDefault),
   limit: zod.coerce
     .number()
@@ -862,7 +888,15 @@ export const ListApplicationsResponse = zod.object({
           candidateFirstName: zod.string().optional(),
           candidateLastName: zod.string().optional(),
           candidateEmail: zod.string().optional(),
+          candidatePhone: zod.string().nullish(),
+          candidateResumeUrl: zod.string().nullish(),
           jobTitle: zod.string().optional(),
+          jobDepartment: zod.string().nullish(),
+          avgRating: zod
+            .string()
+            .nullish()
+            .describe("Average rating as decimal string"),
+          ratingCount: zod.number().nullish(),
         }),
       ),
   ),
@@ -926,8 +960,19 @@ export const GetApplicationResponse = zod
       candidateEmail: zod.string().optional(),
       candidatePhone: zod.string().nullish(),
       candidateResumeUrl: zod.string().nullish(),
+      candidateLinkedinUrl: zod.string().nullish(),
+      candidateSource: zod.string().nullish(),
       jobTitle: zod.string().optional(),
       jobDepartment: zod.string().nullish(),
+      jobCustomFields: zod
+        .array(
+          zod.object({
+            id: zod.string().optional(),
+            label: zod.string().optional(),
+            type: zod.string().optional(),
+          }),
+        )
+        .nullish(),
       ratings: zod
         .array(
           zod.object({
@@ -989,6 +1034,273 @@ export const UpdateApplicationStatusResponse = zod.object({
   notes: zod.string().nullish(),
   appliedAt: zod.coerce.date().optional(),
   updatedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Stream the candidate resume file (auth via Bearer token only)
+ */
+export const GetApplicationResumeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary Update application internal notes
+ */
+export const UpdateApplicationNotesParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateApplicationNotesHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const UpdateApplicationNotesBody = zod.object({
+  notes: zod.string(),
+});
+
+export const UpdateApplicationNotesResponse = zod.object({
+  id: zod.string().uuid(),
+  jobId: zod.string().uuid(),
+  candidateId: zod.string().uuid(),
+  status: zod.enum(["new", "reviewed", "shortlisted", "rejected", "hired"]),
+  customFieldResponses: zod.record(zod.string(), zod.string()).optional(),
+  coverLetter: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  appliedAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Send an email to the candidate for this application
+ */
+export const SendApplicationEmailParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const SendApplicationEmailHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const SendApplicationEmailBody = zod.object({
+  templateId: zod.string().uuid().optional(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().optional(),
+});
+
+export const SendApplicationEmailResponse = zod.object({
+  message: zod.string().optional(),
+  emailLogId: zod.string().optional(),
+});
+
+/**
+ * @summary Get email history for an application
+ */
+export const GetApplicationEmailsParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetApplicationEmailsHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const GetApplicationEmailsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  applicationId: zod.string().uuid().nullish(),
+  candidateId: zod.string().uuid().nullish(),
+  templateId: zod.string().uuid().nullish(),
+  toEmail: zod.string(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().nullish(),
+  status: zod.enum(["pending", "sent", "failed"]),
+  sentBy: zod.string().nullish(),
+  errorMessage: zod.string().nullish(),
+  sentAt: zod.coerce.date(),
+});
+export const GetApplicationEmailsResponse = zod.array(
+  GetApplicationEmailsResponseItem,
+);
+
+/**
+ * @summary Send bulk email to selected candidates
+ */
+export const SendBulkEmailHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const SendBulkEmailBody = zod.object({
+  applicationIds: zod.array(zod.string().uuid()),
+  templateId: zod.string().uuid().optional(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().optional(),
+});
+
+export const SendBulkEmailResponse = zod.object({
+  message: zod.string().optional(),
+  total: zod.number().optional(),
+  sent: zod.number().optional(),
+  results: zod
+    .array(
+      zod.object({
+        applicationId: zod.string().optional(),
+        emailLogId: zod.string().optional(),
+        status: zod.string().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary List email templates for the organization
+ */
+export const ListEmailTemplatesHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const ListEmailTemplatesResponseItem = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  name: zod.string(),
+  slug: zod.string(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().nullish(),
+  mergeFields: zod.array(zod.string()).optional(),
+  isDefault: zod.boolean(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const ListEmailTemplatesResponse = zod.array(
+  ListEmailTemplatesResponseItem,
+);
+
+/**
+ * @summary Create a new email template
+ */
+export const CreateEmailTemplateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const CreateEmailTemplateBody = zod.object({
+  name: zod.string(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().optional(),
+  mergeFields: zod.array(zod.string()).optional(),
+});
+
+/**
+ * @summary Seed default email templates for the organization
+ */
+export const SeedDefaultEmailTemplatesHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const SeedDefaultEmailTemplatesResponse = zod.object({
+  message: zod.string().optional(),
+  count: zod.number().optional(),
+});
+
+/**
+ * @summary Get an email template by ID
+ */
+export const GetEmailTemplateParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetEmailTemplateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const GetEmailTemplateResponse = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  name: zod.string(),
+  slug: zod.string(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().nullish(),
+  mergeFields: zod.array(zod.string()).optional(),
+  isDefault: zod.boolean(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Update an email template
+ */
+export const UpdateEmailTemplateParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateEmailTemplateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
+});
+
+export const UpdateEmailTemplateBody = zod.object({
+  name: zod.string().optional(),
+  subject: zod.string().optional(),
+  htmlBody: zod.string().optional(),
+  textBody: zod.string().optional(),
+  mergeFields: zod.array(zod.string()).optional(),
+});
+
+export const UpdateEmailTemplateResponse = zod.object({
+  id: zod.string().uuid(),
+  organizationId: zod.string().uuid(),
+  name: zod.string(),
+  slug: zod.string(),
+  subject: zod.string(),
+  htmlBody: zod.string(),
+  textBody: zod.string().nullish(),
+  mergeFields: zod.array(zod.string()).optional(),
+  isDefault: zod.boolean(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Delete an email template
+ */
+export const DeleteEmailTemplateParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const DeleteEmailTemplateHeader = zod.object({
+  "X-Organization-Id": zod
+    .string()
+    .uuid()
+    .describe("The organization context for this request"),
 });
 
 /**

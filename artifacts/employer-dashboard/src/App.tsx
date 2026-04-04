@@ -18,6 +18,7 @@ import JobDetail from "@/pages/jobs/detail";
 import CandidatesPage from "@/pages/candidates";
 import ApplicationsPage from "@/pages/applications";
 import ApplicationDetail from "@/pages/application-detail";
+import EmailTemplatesPage from "@/pages/email-templates";
 import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -84,6 +85,7 @@ function AppRouter() {
         <Route path="/candidates" component={CandidatesPage} />
         <Route path="/applications/:id">{(params) => <ApplicationDetail applicationId={params.id} />}</Route>
         <Route path="/applications">{() => <ApplicationsPage />}</Route>
+        <Route path="/email-templates" component={EmailTemplatesPage} />
         <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>

@@ -11,6 +11,7 @@ import {
   Briefcase,
   Users,
   FileText,
+  Mail,
   Settings,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ const navItems = [
   { label: "Jobs", href: "/jobs", icon: Briefcase },
   { label: "Candidates", href: "/candidates", icon: Users },
   { label: "Applications", href: "/applications", icon: FileText },
+  { label: "Email Templates", href: "/email-templates", icon: Mail },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

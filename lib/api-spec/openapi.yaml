@@ -18,6 +18,8 @@ tags:
     description: Candidate profile management
   - name: applications
     description: Application tracking and management
+  - name: email-templates
+    description: Email template management
   - name: careers
     description: Public careers page and application submission
 
@@ -713,6 +715,292 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /applications/{id}/email:
+    post:
+      operationId: sendApplicationEmail
+      tags: [applications]
+      summary: Send an email to the candidate for this application
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                templateId:
+                  type: string
+                  format: uuid
+                subject:
+                  type: string
+                htmlBody:
+                  type: string
+                textBody:
+                  type: string
+              required:
+                - subject
+                - htmlBody
+      responses:
+        "200":
+          description: Email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  emailLogId:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /applications/{id}/emails:
+    get:
+      operationId: getApplicationEmails
+      tags: [applications]
+      summary: Get email history for an application
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Email history list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmailLog"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /applications/bulk-email:
+    post:
+      operationId: sendBulkEmail
+      tags: [applications]
+      summary: Send bulk email to selected candidates
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applicationIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                templateId:
+                  type: string
+                  format: uuid
+                subject:
+                  type: string
+                htmlBody:
+                  type: string
+                textBody:
+                  type: string
+              required:
+                - applicationIds
+                - subject
+                - htmlBody
+      responses:
+        "200":
+          description: Bulk email results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  total:
+                    type: integer
+                  sent:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        applicationId:
+                          type: string
+                        emailLogId:
+                          type: string
+                        status:
+                          type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /email-templates:
+    get:
+      operationId: listEmailTemplates
+      tags: [email-templates]
+      summary: List email templates for the organization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: List of email templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmailTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createEmailTemplate
+      tags: [email-templates]
+      summary: Create a new email template
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                subject:
+                  type: string
+                htmlBody:
+                  type: string
+                textBody:
+                  type: string
+                mergeFields:
+                  type: array
+                  items:
+                    type: string
+              required:
+                - name
+                - subject
+                - htmlBody
+      responses:
+        "201":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /email-templates/seed-defaults:
+    get:
+      operationId: seedDefaultEmailTemplates
+      tags: [email-templates]
+      summary: Seed default email templates for the organization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Seed result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  count:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /email-templates/{id}:
+    get:
+      operationId: getEmailTemplate
+      tags: [email-templates]
+      summary: Get an email template by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateEmailTemplate
+      tags: [email-templates]
+      summary: Update an email template
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                subject:
+                  type: string
+                htmlBody:
+                  type: string
+                textBody:
+                  type: string
+                mergeFields:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteEmailTemplate
+      tags: [email-templates]
+      summary: Delete an email template
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Template deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /careers/{orgSlug}:
     get:
@@ -1735,3 +2023,95 @@ components:
       required:
         - message
         - applicationId
+
+    EmailTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        subject:
+          type: string
+        htmlBody:
+          type: string
+        textBody:
+          type: string
+          nullable: true
+        mergeFields:
+          type: array
+          items:
+            type: string
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organizationId
+        - name
+        - slug
+        - subject
+        - htmlBody
+        - isDefault
+
+    EmailLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+          nullable: true
+        candidateId:
+          type: string
+          format: uuid
+          nullable: true
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        toEmail:
+          type: string
+        subject:
+          type: string
+        htmlBody:
+          type: string
+        textBody:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, sent, failed]
+        sentBy:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        sentAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organizationId
+        - toEmail
+        - subject
+        - htmlBody
+        - status
+        - sentAt

@@ -11,5 +11,11 @@ export type PaginatedApplicationsDataItem = Application & {
   candidateFirstName?: string;
   candidateLastName?: string;
   candidateEmail?: string;
+  candidatePhone?: string | null;
+  candidateResumeUrl?: string | null;
   jobTitle?: string;
+  jobDepartment?: string | null;
+  /** Average rating as decimal string */
+  avgRating?: string | null;
+  ratingCount?: number | null;
 };

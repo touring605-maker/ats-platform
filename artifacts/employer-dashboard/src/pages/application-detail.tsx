@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useApplication, useUpdateApplicationStatus, useAddRating, useUpdateApplicationNotes, useResumeUrl } from "@/hooks/use-api";
+import { useApplication, useUpdateApplicationStatus, useAddRating, useUpdateApplicationNotes, useResumeUrl, useEmailHistory, useEmailTemplates, useSendEmail } from "@/hooks/use-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -13,6 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -28,6 +37,8 @@ import {
   ExternalLink,
   User,
   MessageSquare,
+  Send,
+  Clock,
 } from "lucide-react";
 import { statusColor, formatDate } from "@/lib/utils";
 
@@ -65,14 +76,22 @@ function StarRatingInput({ value, onChange }: { value: number; onChange: (v: num
 export default function ApplicationDetail({ applicationId }: ApplicationDetailProps) {
   const { data: app, isLoading } = useApplication(applicationId);
   const { data: resumeBlobUrl } = useResumeUrl(applicationId, app?.candidateResumeUrl);
+  const { data: emailHistory } = useEmailHistory(applicationId);
+  const { data: emailTemplates } = useEmailTemplates();
   const updateStatus = useUpdateApplicationStatus();
   const addRating = useAddRating();
   const updateNotes = useUpdateApplicationNotes();
+  const sendEmail = useSendEmail();
   const { toast } = useToast();
 
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
   const [notes, setNotes] = useState<string | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | "">("");
+  const [notifyOnStatusChange, setNotifyOnStatusChange] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   if (isLoading) {
@@ -102,12 +121,45 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
 
   function handleStatusChange(newStatus: string) {
     updateStatus.mutate(
-      { id: applicationId, status: newStatus },
+      { id: applicationId, status: newStatus, notifyCandidate: notifyOnStatusChange },
       {
-        onSuccess: () => toast({ title: "Status updated", description: `Application status changed to ${newStatus}` }),
+        onSuccess: () => {
+          toast({ title: "Status updated", description: `Application status changed to ${newStatus}${notifyOnStatusChange ? " — candidate notified" : ""}` });
+        },
         onError: () => toast({ title: "Error", description: "Failed to update status", variant: "destructive" }),
       }
     );
+  }
+
+  function handleSelectTemplate(templateId: string) {
+    setSelectedTemplateId(templateId);
+    const template = emailTemplates?.find(t => t.id === templateId);
+    if (template) {
+      setEmailSubject(template.subject);
+      setEmailBody(template.htmlBody);
+    }
+  }
+
+  async function handleSendEmail() {
+    if (!emailSubject || !emailBody) {
+      toast({ title: "Error", description: "Subject and body are required", variant: "destructive" });
+      return;
+    }
+    try {
+      await sendEmail.mutateAsync({
+        applicationId,
+        templateId: selectedTemplateId || undefined,
+        subject: emailSubject,
+        htmlBody: emailBody,
+      });
+      toast({ title: "Email sent" });
+      setEmailDialogOpen(false);
+      setEmailSubject("");
+      setEmailBody("");
+      setSelectedTemplateId("");
+    } catch {
+      toast({ title: "Error", description: "Failed to send email", variant: "destructive" });
+    }
   }
 
   function handleSubmitRating() {
@@ -331,7 +383,16 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
                   <SelectItem value="hired">Hired</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex flex-wrap gap-1.5 mt-3">
+              <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifyOnStatusChange}
+                  onChange={(e) => setNotifyOnStatusChange(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-xs text-gray-600">Notify candidate of status change</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5 mt-2">
                 {["reviewed", "shortlisted", "hired", "rejected"].filter(s => s !== app.status).map((s) => (
                   <Button
                     key={s}
@@ -345,6 +406,23 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
                   </Button>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Send className="w-4 h-4" /> Send Email
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => setEmailDialogOpen(true)}
+              >
+                <Mail className="w-4 h-4 mr-2" /> Compose Email
+              </Button>
             </CardContent>
           </Card>
 
@@ -411,8 +489,83 @@ export default function ApplicationDetail({ applicationId }: ApplicationDetailPr
               </CardContent>
             </Card>
           )}
+
+          {emailHistory && emailHistory.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Email History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {emailHistory.map((email) => (
+                    <div key={email.id} className="border-b last:border-0 pb-2 last:pb-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-gray-700 truncate flex-1">{email.subject}</p>
+                        <Badge variant={email.status === "sent" ? "default" : "destructive"} className="text-[10px] ml-2">
+                          {email.status}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        To: {email.toEmail} · {formatDate(email.sentAt)}
+                        {email.sentBy === "system" && " · Auto"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
+
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Email to {app.candidateFirstName} {app.candidateLastName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Template (optional)</Label>
+              <Select value={selectedTemplateId} onValueChange={handleSelectTemplate}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {emailTemplates?.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Email subject..."
+              />
+            </div>
+            <div>
+              <Label>Body (HTML)</Label>
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                placeholder="Email body..."
+                rows={8}
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendEmail} disabled={sendEmail.isPending}>
+              {sendEmail.isPending ? "Sending..." : "Send Email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

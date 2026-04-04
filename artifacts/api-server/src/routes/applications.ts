@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { Readable } from "stream";
 import { db } from "@workspace/db";
-import { applicationsTable, applicationRatingsTable, candidatesTable, jobsTable, organizationMembersTable } from "@workspace/db/schema";
-import { eq, and, count, avg, desc, asc, gte, lte, sql, ilike, or } from "drizzle-orm";
+import { applicationsTable, applicationRatingsTable, candidatesTable, jobsTable, organizationMembersTable, organizationsTable, emailTemplatesTable, emailLogsTable } from "@workspace/db/schema";
+import { eq, and, count, avg, desc, asc, gte, lte, sql, ilike, or, inArray } from "drizzle-orm";
 import { requireAuth, requireOrgMembership } from "../middlewares/requireAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { sendAndLogEmail, renderTemplate } from "../lib/emailService";
 
 const router = Router();
 
@@ -256,9 +257,9 @@ router.delete("/:id", requireOrgMembership(["admin"]), async (req, res) => {
 });
 
 router.patch("/:id/status", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
-  const { organizationId } = req.auth_context!;
+  const { organizationId, userId } = req.auth_context!;
   const id = req.params.id as string;
-  const { status } = req.body;
+  const { status, notifyCandidate } = req.body;
 
   const validStatuses = ["new", "reviewed", "shortlisted", "rejected", "hired"];
   if (!validStatuses.includes(status)) {
@@ -267,7 +268,11 @@ router.patch("/:id/status", requireOrgMembership(["admin", "hiring_manager"]), a
   }
 
   const [existing] = await db
-    .select({ id: applicationsTable.id })
+    .select({
+      id: applicationsTable.id,
+      candidateId: applicationsTable.candidateId,
+      jobId: applicationsTable.jobId,
+    })
     .from(applicationsTable)
     .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
     .where(and(eq(applicationsTable.id, id), eq(jobsTable.organizationId, organizationId)))
@@ -285,6 +290,68 @@ router.patch("/:id/status", requireOrgMembership(["admin", "hiring_manager"]), a
     .returning();
 
   res.json(updated);
+
+  if (notifyCandidate) {
+    (async () => {
+      try {
+        const [candidate] = await db
+          .select()
+          .from(candidatesTable)
+          .where(eq(candidatesTable.id, existing.candidateId))
+          .limit(1);
+
+        const [job] = await db
+          .select({ title: jobsTable.title, organizationId: jobsTable.organizationId })
+          .from(jobsTable)
+          .where(eq(jobsTable.id, existing.jobId))
+          .limit(1);
+
+        const [org] = await db
+          .select({ name: organizationsTable.name })
+          .from(organizationsTable)
+          .where(eq(organizationsTable.id, organizationId))
+          .limit(1);
+
+        if (!candidate || !job || !org) return;
+
+        const templateSlug = status === "rejected" ? "rejection" : status === "hired" ? "offer" : "status_update";
+
+        const [template] = await db
+          .select()
+          .from(emailTemplatesTable)
+          .where(and(
+            eq(emailTemplatesTable.organizationId, organizationId),
+            eq(emailTemplatesTable.slug, templateSlug),
+            eq(emailTemplatesTable.isDefault, true)
+          ))
+          .limit(1);
+
+        if (!template) return;
+
+        const mergeData: Record<string, string> = {
+          candidateName: `${candidate.firstName} ${candidate.lastName}`,
+          candidateEmail: candidate.email,
+          jobTitle: job.title,
+          companyName: org.name,
+          status: status.charAt(0).toUpperCase() + status.slice(1),
+        };
+
+        await sendAndLogEmail({
+          organizationId,
+          applicationId: id,
+          candidateId: candidate.id,
+          templateId: template.id,
+          toEmail: candidate.email,
+          subject: renderTemplate(template.subject, mergeData),
+          htmlBody: renderTemplate(template.htmlBody, mergeData),
+          textBody: template.textBody ? renderTemplate(template.textBody, mergeData) : undefined,
+          sentBy: userId,
+        });
+      } catch (err) {
+        req.log?.error({ err }, "Error sending status change notification");
+      }
+    })();
+  }
 });
 
 router.patch("/:id/notes", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
@@ -442,4 +509,151 @@ router.get("/:id/resume", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/:id/email", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
+  const { organizationId, userId } = req.auth_context!;
+  const id = req.params.id as string;
+  const { templateId, subject, htmlBody, textBody } = req.body;
+
+  if (!subject || !htmlBody) {
+    res.status(400).json({ error: "subject and htmlBody are required" });
+    return;
+  }
+
+  const [application] = await db
+    .select({
+      id: applicationsTable.id,
+      candidateId: applicationsTable.candidateId,
+      candidateEmail: candidatesTable.email,
+      candidateFirstName: candidatesTable.firstName,
+      candidateLastName: candidatesTable.lastName,
+    })
+    .from(applicationsTable)
+    .innerJoin(candidatesTable, eq(applicationsTable.candidateId, candidatesTable.id))
+    .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
+    .where(and(eq(applicationsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!application) {
+    res.status(404).json({ error: "Application not found" });
+    return;
+  }
+
+  const emailLogId = await sendAndLogEmail({
+    organizationId,
+    applicationId: id,
+    candidateId: application.candidateId,
+    templateId: templateId || undefined,
+    toEmail: application.candidateEmail,
+    subject,
+    htmlBody,
+    textBody,
+    sentBy: userId,
+  });
+
+  res.json({ message: "Email sent", emailLogId });
+});
+
+router.post("/bulk-email", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
+  const { organizationId, userId } = req.auth_context!;
+  const { applicationIds, templateId, subject, htmlBody, textBody } = req.body;
+
+  if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+    res.status(400).json({ error: "applicationIds array is required" });
+    return;
+  }
+
+  if (!subject || !htmlBody) {
+    res.status(400).json({ error: "subject and htmlBody are required" });
+    return;
+  }
+
+  const applications = await db
+    .select({
+      id: applicationsTable.id,
+      candidateId: applicationsTable.candidateId,
+      candidateEmail: candidatesTable.email,
+      candidateFirstName: candidatesTable.firstName,
+      candidateLastName: candidatesTable.lastName,
+      jobTitle: jobsTable.title,
+    })
+    .from(applicationsTable)
+    .innerJoin(candidatesTable, eq(applicationsTable.candidateId, candidatesTable.id))
+    .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
+    .where(and(
+      inArray(applicationsTable.id, applicationIds),
+      eq(jobsTable.organizationId, organizationId)
+    ));
+
+  if (applications.length === 0) {
+    res.status(404).json({ error: "No matching applications found" });
+    return;
+  }
+
+  const [org] = await db
+    .select({ name: organizationsTable.name })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.id, organizationId))
+    .limit(1);
+
+  const results: Array<{ applicationId: string; emailLogId: string; status: string }> = [];
+
+  for (const app of applications) {
+    const mergeData: Record<string, string> = {
+      candidateName: `${app.candidateFirstName} ${app.candidateLastName}`,
+      candidateEmail: app.candidateEmail,
+      jobTitle: app.jobTitle,
+      companyName: org?.name || "",
+    };
+
+    const renderedSubject = renderTemplate(subject, mergeData);
+    const renderedHtml = renderTemplate(htmlBody, mergeData);
+    const renderedText = textBody ? renderTemplate(textBody, mergeData) : undefined;
+
+    try {
+      const emailLogId = await sendAndLogEmail({
+        organizationId,
+        applicationId: app.id,
+        candidateId: app.candidateId,
+        templateId: templateId || undefined,
+        toEmail: app.candidateEmail,
+        subject: renderedSubject,
+        htmlBody: renderedHtml,
+        textBody: renderedText,
+        sentBy: userId,
+      });
+      results.push({ applicationId: app.id, emailLogId, status: "sent" });
+    } catch {
+      results.push({ applicationId: app.id, emailLogId: "", status: "failed" });
+    }
+  }
+
+  res.json({ message: "Bulk email completed", results, total: results.length, sent: results.filter(r => r.status === "sent").length });
+});
+
+router.get("/:id/emails", requireOrgMembership(), async (req, res) => {
+  const { organizationId } = req.auth_context!;
+  const id = req.params.id as string;
+
+  const [application] = await db
+    .select({ id: applicationsTable.id })
+    .from(applicationsTable)
+    .innerJoin(jobsTable, eq(applicationsTable.jobId, jobsTable.id))
+    .where(and(eq(applicationsTable.id, id), eq(jobsTable.organizationId, organizationId)))
+    .limit(1);
+
+  if (!application) {
+    res.status(404).json({ error: "Application not found" });
+    return;
+  }
+
+  const emails = await db
+    .select()
+    .from(emailLogsTable)
+    .where(eq(emailLogsTable.applicationId, id))
+    .orderBy(desc(emailLogsTable.sentAt));
+
+  res.json(emails);
+});
+
 export default router;
+

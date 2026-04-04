@@ -31,6 +31,8 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `candidates` — candidate profiles scoped to organization
 - `applications` — links candidates to jobs with status pipeline (new→reviewed→shortlisted→rejected/hired)
 - `application_ratings` — 1-5 star ratings per application per reviewer
+- `email_templates` — org-scoped email templates with merge field support (name, subject, htmlBody, textBody, mergeFields, isDefault)
+- `email_logs` — email send history linked to applications/candidates (toEmail, subject, htmlBody, status, sentBy, sentAt)
 
 ## GitHub Repository
 
@@ -80,6 +82,12 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `GET /api/careers/:orgSlug` — public careers page: org info + published jobs (no auth)
 - `GET /api/careers/:orgSlug/jobs/:jobId` — public job detail (no auth)
 - `POST /api/careers/:orgSlug/jobs/:jobId/apply` — submit application with resume upload (no auth, multipart/form-data)
+- `GET/POST /api/email-templates` — list/create email templates (org membership required)
+- `GET /api/email-templates/seed-defaults` — seed default email templates (org membership required)
+- `GET/PUT/DELETE /api/email-templates/:id` — get/update/delete email template
+- `POST /api/applications/:id/email` — send individual email to candidate (org membership required)
+- `GET /api/applications/:id/emails` — get email history for application
+- `POST /api/applications/bulk-email` — send bulk email to selected candidates
 - `GET /api/storage/objects/*` — serve private objects (auth required)
 - `GET /api/storage/public-objects/*` — serve public objects (no auth)
 
@@ -92,7 +100,8 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `/jobs/:id/edit` — Edit job form
 - `/candidates` — Candidates list with search
 - `/applications` — Applications list with search, job filter, status filter, sortable columns (date/name/rating/status), rating display, pagination
-- `/applications/:id` — Application detail: candidate info, cover letter, custom field responses, resume download, internal notes, status updates, star rating with history
+- `/applications/:id` — Application detail: candidate info, cover letter, custom field responses, resume download, internal notes, status updates, star rating with history, email send dialog, email history timeline
+- `/email-templates` — Email templates management: list, create, edit, delete, preview, seed defaults, merge field insertion
 - `/settings` — Organization settings (Clerk OrganizationProfile)
 
 ## Frontend Pages (careers-page)
@@ -116,3 +125,6 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `.github/workflows/` files cannot be pushed via OAuth — gitignored; push manually with PAT with workflow scope
 - Careers page requires no auth — public endpoints use `:orgSlug` path param for tenant scoping
 - DOMPurify used on both employer dashboard and careers page for safe HTML rendering of job descriptions
+- Email service: ConsoleEmailService (dev mode, logs to console); automated notifications on application submit + status change
+- Email merge fields: `{{candidateName}}`, `{{candidateEmail}}`, `{{jobTitle}}`, `{{companyName}}`, `{{status}}`
+- Notifications fire async after response to avoid blocking API responses

@@ -7,11 +7,37 @@
  */
 import type { ApplicationStatus } from "./applicationStatus";
 import type { LimitParameter } from "./limitParameter";
+import type { ListApplicationsSortBy } from "./listApplicationsSortBy";
+import type { ListApplicationsSortOrder } from "./listApplicationsSortOrder";
 import type { PageParameter } from "./pageParameter";
 
 export type ListApplicationsParams = {
   jobId?: string;
   status?: ApplicationStatus;
+  /**
+   * Search by candidate name or email
+   */
+  search?: string;
+  /**
+   * Minimum average rating filter
+   */
+  minRating?: string;
+  /**
+   * Filter applications from this date (ISO 8601)
+   */
+  dateFrom?: Date;
+  /**
+   * Filter applications up to this date (ISO 8601)
+   */
+  dateTo?: Date;
+  /**
+   * Sort field
+   */
+  sortBy?: ListApplicationsSortBy;
+  /**
+   * Sort direction
+   */
+  sortOrder?: ListApplicationsSortOrder;
   /**
    * @minimum 1
    */

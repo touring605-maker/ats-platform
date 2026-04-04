@@ -7,6 +7,7 @@ import organizationsRouter from "./organizations";
 import dashboardRouter from "./dashboard";
 import careersRouter from "./careers";
 import storageRouter from "./storage";
+import emailTemplatesRouter from "./emailTemplates";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/candidates", candidatesRouter);
 router.use("/applications", applicationsRouter);
 router.use("/organizations", organizationsRouter);
 router.use("/careers", careersRouter);
+router.use("/email-templates", emailTemplatesRouter);
 
 export default router;

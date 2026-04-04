@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useApplications, useJobs, useBulkUpdateApplicationStatus } from "@/hooks/use-api";
+import { useApplications, useJobs, useBulkUpdateApplicationStatus, useEmailTemplates, useBulkEmail } from "@/hooks/use-api";
 import { Link, useSearch } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Star, Search, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X, CheckSquare } from "lucide-react";
+import { FileText, Star, Search, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X, CheckSquare, Mail } from "lucide-react";
 import { statusColor, formatDate } from "@/lib/utils";
 
 function StarRating({ rating }: { rating: number | null }) {
@@ -56,9 +64,15 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState("");
+  const [bulkEmailBody, setBulkEmailBody] = useState("");
+  const [bulkEmailTemplateId, setBulkEmailTemplateId] = useState<string | "">("");
 
   const { toast } = useToast();
   const bulkUpdate = useBulkUpdateApplicationStatus();
+  const { data: emailTemplates } = useEmailTemplates();
+  const bulkEmail = useBulkEmail();
 
   const { data: jobsData } = useJobs({ limit: 100 });
   const jobs = jobsData?.data || [];
@@ -122,6 +136,38 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
         },
       }
     );
+  }
+
+  function handleBulkEmailSelectTemplate(templateId: string) {
+    setBulkEmailTemplateId(templateId);
+    const template = emailTemplates?.find(t => t.id === templateId);
+    if (template) {
+      setBulkEmailSubject(template.subject);
+      setBulkEmailBody(template.htmlBody);
+    }
+  }
+
+  async function handleSendBulkEmail() {
+    if (!bulkEmailSubject || !bulkEmailBody) {
+      toast({ title: "Error", description: "Subject and body are required", variant: "destructive" });
+      return;
+    }
+    try {
+      const result = await bulkEmail.mutateAsync({
+        applicationIds: Array.from(selectedIds),
+        templateId: bulkEmailTemplateId || undefined,
+        subject: bulkEmailSubject,
+        htmlBody: bulkEmailBody,
+      });
+      toast({ title: "Bulk email sent", description: `${result.sent} of ${result.total} emails sent` });
+      setBulkEmailOpen(false);
+      setBulkEmailSubject("");
+      setBulkEmailBody("");
+      setBulkEmailTemplateId("");
+      setSelectedIds(new Set());
+    } catch {
+      toast({ title: "Error", description: "Failed to send bulk email", variant: "destructive" });
+    }
   }
 
   function toggleSort(field: string) {
@@ -306,6 +352,14 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
                 {s}
               </Button>
             ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1"
+              onClick={() => setBulkEmailOpen(true)}
+            >
+              <Mail className="w-3.5 h-3.5" /> Email
+            </Button>
             <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIds(new Set())}>
               Clear
             </Button>
@@ -429,6 +483,56 @@ export default function ApplicationsPage({ jobId, jobTitle }: ApplicationsPagePr
           )}
         </div>
       )}
+
+      <Dialog open={bulkEmailOpen} onOpenChange={setBulkEmailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Bulk Email ({selectedIds.size} candidates)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Template (optional)</label>
+              <Select value={bulkEmailTemplateId} onValueChange={handleBulkEmailSelectTemplate}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {emailTemplates?.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Subject</label>
+              <Input
+                value={bulkEmailSubject}
+                onChange={(e) => setBulkEmailSubject(e.target.value)}
+                placeholder="Email subject... (supports {{candidateName}}, {{jobTitle}}, etc.)"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Body (HTML)</label>
+              <Textarea
+                value={bulkEmailBody}
+                onChange={(e) => setBulkEmailBody(e.target.value)}
+                placeholder="Email body..."
+                rows={8}
+                className="font-mono text-sm"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Merge fields: {"{{candidateName}}"}, {"{{candidateEmail}}"}, {"{{jobTitle}}"}, {"{{companyName}}"}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEmailOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendBulkEmail} disabled={bulkEmail.isPending}>
+              {bulkEmail.isPending ? "Sending..." : `Send to ${selectedIds.size} candidates`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

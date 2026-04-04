@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Application } from "./application";
+import type { ApplicationDetailJobCustomFieldsItem } from "./applicationDetailJobCustomFieldsItem";
 import type { ApplicationRating } from "./applicationRating";
 
 export type ApplicationDetail = Application & {
@@ -14,7 +15,10 @@ export type ApplicationDetail = Application & {
   candidateEmail?: string;
   candidatePhone?: string | null;
   candidateResumeUrl?: string | null;
+  candidateLinkedinUrl?: string | null;
+  candidateSource?: string | null;
   jobTitle?: string;
   jobDepartment?: string | null;
+  jobCustomFields?: ApplicationDetailJobCustomFieldsItem[] | null;
   ratings?: ApplicationRating[];
 };

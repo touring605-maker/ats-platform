@@ -235,6 +235,12 @@ export interface Application {
   updatedAt?: string;
 }
 
+export type ApplicationDetailJobCustomFieldsItem = {
+  id?: string;
+  label?: string;
+  type?: string;
+};
+
 export interface ApplicationRating {
   id: string;
   applicationId: string;
@@ -255,8 +261,11 @@ export type ApplicationDetail = Application & {
   candidateEmail?: string;
   candidatePhone?: string | null;
   candidateResumeUrl?: string | null;
+  candidateLinkedinUrl?: string | null;
+  candidateSource?: string | null;
   jobTitle?: string;
   jobDepartment?: string | null;
+  jobCustomFields?: ApplicationDetailJobCustomFieldsItem[] | null;
   ratings?: ApplicationRating[];
 };
 
@@ -264,7 +273,13 @@ export type PaginatedApplicationsDataItem = Application & {
   candidateFirstName?: string;
   candidateLastName?: string;
   candidateEmail?: string;
+  candidatePhone?: string | null;
+  candidateResumeUrl?: string | null;
   jobTitle?: string;
+  jobDepartment?: string | null;
+  /** Average rating as decimal string */
+  avgRating?: string | null;
+  ratingCount?: number | null;
 };
 
 export interface PaginatedApplications {
@@ -386,6 +401,45 @@ export interface ApplicationSubmitResponse {
   applicationId: string;
 }
 
+export interface EmailTemplate {
+  id: string;
+  organizationId: string;
+  name: string;
+  slug: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string | null;
+  mergeFields?: string[];
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type EmailLogStatus =
+  (typeof EmailLogStatus)[keyof typeof EmailLogStatus];
+
+export const EmailLogStatus = {
+  pending: "pending",
+  sent: "sent",
+  failed: "failed",
+} as const;
+
+export interface EmailLog {
+  id: string;
+  organizationId: string;
+  applicationId?: string | null;
+  candidateId?: string | null;
+  templateId?: string | null;
+  toEmail: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string | null;
+  status: EmailLogStatus;
+  sentBy?: string | null;
+  errorMessage?: string | null;
+  sentAt: string;
+}
+
 /**
  * Authentication required
  */
@@ -443,6 +497,30 @@ export type ListApplicationsParams = {
   jobId?: string;
   status?: ApplicationStatus;
   /**
+   * Search by candidate name or email
+   */
+  search?: string;
+  /**
+   * Minimum average rating filter
+   */
+  minRating?: string;
+  /**
+   * Filter applications from this date (ISO 8601)
+   */
+  dateFrom?: string;
+  /**
+   * Filter applications up to this date (ISO 8601)
+   */
+  dateTo?: string;
+  /**
+   * Sort field
+   */
+  sortBy?: ListApplicationsSortBy;
+  /**
+   * Sort direction
+   */
+  sortOrder?: ListApplicationsSortOrder;
+  /**
    * @minimum 1
    */
   page?: PageParameter;
@@ -453,8 +531,84 @@ export type ListApplicationsParams = {
   limit?: LimitParameter;
 };
 
+export type ListApplicationsSortBy =
+  (typeof ListApplicationsSortBy)[keyof typeof ListApplicationsSortBy];
+
+export const ListApplicationsSortBy = {
+  appliedAt: "appliedAt",
+  candidateName: "candidateName",
+  rating: "rating",
+  status: "status",
+} as const;
+
+export type ListApplicationsSortOrder =
+  (typeof ListApplicationsSortOrder)[keyof typeof ListApplicationsSortOrder];
+
+export const ListApplicationsSortOrder = {
+  asc: "asc",
+  desc: "desc",
+} as const;
+
 export type UpdateApplicationStatusBody = {
   status: ApplicationStatus;
+};
+
+export type UpdateApplicationNotesBody = {
+  notes: string;
+};
+
+export type SendApplicationEmailBody = {
+  templateId?: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+};
+
+export type SendApplicationEmail200 = {
+  message?: string;
+  emailLogId?: string;
+};
+
+export type SendBulkEmailBody = {
+  applicationIds: string[];
+  templateId?: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+};
+
+export type SendBulkEmail200ResultsItem = {
+  applicationId?: string;
+  emailLogId?: string;
+  status?: string;
+};
+
+export type SendBulkEmail200 = {
+  message?: string;
+  total?: number;
+  sent?: number;
+  results?: SendBulkEmail200ResultsItem[];
+};
+
+export type CreateEmailTemplateBody = {
+  name: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+  mergeFields?: string[];
+};
+
+export type SeedDefaultEmailTemplates200 = {
+  message?: string;
+  count?: number;
+};
+
+export type UpdateEmailTemplateBody = {
+  name?: string;
+  subject?: string;
+  htmlBody?: string;
+  textBody?: string;
+  mergeFields?: string[];
 };
 
 export type GetCareersPageParams = {
