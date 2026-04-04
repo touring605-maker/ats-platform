@@ -1,25 +1,40 @@
-# ATS Platform Workspace
+# LastATS Platform Workspace
 
 ## Overview
 
-ATS (Applicant Tracking System) SaaS platform using a product-based architecture. pnpm workspace monorepo with TypeScript. Each package manages its own dependencies.
+LastATS — Applicant Tracking System SaaS platform using a product-based architecture. pnpm workspace monorepo with TypeScript.
 
 ## Architecture
 
 The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARDS.md`). Key structure:
 
-- **`src/products/`** — 9 bounded contexts: requisitions, candidates, screening, interviews, offers, onboarding, marketplace, analytics, notifications. Each product owns its API, services, repositories, events, models, validators, and tests.
-- **`src/shared/`** — Cross-cutting concerns: error hierarchy (AppError + typed subclasses), JWT auth middleware, HTTP middleware (security headers, rate limiting, request ID), pagination models, common validators.
-- **`src/infrastructure/`** — Cloud abstraction interfaces: IFileStorageService, IMessageBusService, ICacheService, IAIService, IEmailService, ICalendarService, IIdentityService, ISecretsService.
-- **`src/config/`** — App config, database config, feature flags config.
-- **`migrations/`** — Per-product migration subfolders.
-- **`tests/`** — e2e and load test directories.
-- **`docs/adr/`** — Architecture Decision Records.
+- **`lib/db/src/schema/`** — Drizzle ORM schema: organizations, organizationMembers, jobs, candidates, applications, applicationRatings
+- **`artifacts/api-server/`** — Express 5 API server with Clerk auth, tenant-isolated routes for jobs, candidates, applications, organizations
+- **`lib/api-spec/`** — OpenAPI 3.1 spec with Orval codegen
+- **`src/products/`** — 9 bounded contexts (scaffold): requisitions, candidates, screening, interviews, offers, onboarding, marketplace, analytics, notifications
+- **`src/shared/`** — Cross-cutting concerns: error hierarchy, HTTP middleware (logging, CORS, security headers, rate limiting)
+- **`src/infrastructure/`** — Cloud abstraction interfaces
+- **`src/config/`** — App, database, and feature flags config
+
+## Authentication
+
+- **Provider**: Clerk (auto-provisioned)
+- **Server middleware**: `@clerk/express` — `clerkMiddleware()` + custom `requireAuth` and `requireOrgMembership` middleware
+- **Tenant isolation**: `X-Organization-Id` header on all org-scoped requests, membership verified against `organization_members` table
+- **Roles**: admin, hiring_manager, viewer
+
+## Database Tables
+
+- `organizations` — tenant/company records with slug, branding
+- `organization_members` — maps Clerk users to orgs with roles
+- `jobs` — job postings with status lifecycle (draft→published→closed→archived), custom application form fields
+- `candidates` — candidate profiles scoped to organization
+- `applications` — links candidates to jobs with status pipeline (new→reviewed→shortlisted→rejected/hired)
+- `application_ratings` — 1-5 star ratings per application per reviewer
 
 ## GitHub Repository
 
 - **Repo:** https://github.com/touring605-maker/ats-platform
-- **Note:** `.github/workflows/` files (PR pipeline + deploy pipeline) exist locally but could not be pushed to GitHub due to OAuth scope limitations (missing `workflow` scope). Push these manually with a token that has the `workflow` scope.
 
 ## Stack
 
@@ -28,10 +43,11 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
+- **Auth**: Clerk
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Build**: esbuild
 
 ## Key Commands
 
@@ -40,5 +56,17 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `pnpm --filter @workspace/api-server run seed` — seed demo data (Acme Corporation org + sample jobs/candidates/applications)
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## API Endpoints
+
+- `GET /api/healthz` — health check (public)
+- `GET /api/organizations/mine` — get current user's orgs (auth required)
+- `GET/POST /api/jobs` — list/create jobs (org membership required)
+- `GET/PATCH/DELETE /api/jobs/:id` — get/update/delete job
+- `GET/POST /api/candidates` — list/create candidates
+- `GET/PATCH/DELETE /api/candidates/:id` — get/update/delete candidate
+- `GET /api/applications` — list applications (filterable by jobId, status)
+- `GET /api/applications/:id` — get application detail with ratings
+- `PATCH /api/applications/:id/status` — update application status
+- `GET/POST /api/applications/:id/ratings` — get/add ratings

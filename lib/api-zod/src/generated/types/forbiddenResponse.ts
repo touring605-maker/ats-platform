@@ -5,7 +5,9 @@
  * LastATS - Applicant Tracking System API
  * OpenAPI spec version: 0.1.0
  */
+import type { Error } from "./error";
 
-export interface HealthStatus {
-  status: string;
-}
+/**
+ * Insufficient permissions
+ */
+export type ForbiddenResponse = Error;

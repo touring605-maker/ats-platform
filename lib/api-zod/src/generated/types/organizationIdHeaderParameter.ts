@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+/**
+ * The organization context for this request
+ */
+export type OrganizationIdHeaderParameter = string;

@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: LastATS - Applicant Tracking System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: organizations
+    description: Organization and tenant management
+  - name: jobs
+    description: Job posting management
+  - name: candidates
+    description: Candidate profile management
+  - name: applications
+    description: Application tracking and management
+
+security:
+  - clerkAuth: []
+
 paths:
   /healthz:
     get:
@@ -17,6 +29,7 @@ paths:
       tags: [health]
       summary: Health check
       description: Returns server health status
+      security: []
       responses:
         "200":
           description: Healthy
@@ -24,8 +37,410 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /organizations/mine:
+    get:
+      operationId: getMyOrganizations
+      tags: [organizations]
+      summary: Get current user's organizations
+      responses:
+        "200":
+          description: List of organizations the user belongs to
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrganizationMembership"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /organizations/{id}:
+    get:
+      operationId: getOrganization
+      tags: [organizations]
+      summary: Get organization details
+      parameters:
+        - $ref: "#/components/parameters/OrgIdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List jobs for the organization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/JobStatus"
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated list of jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedJobs"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Create a new job posting
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJob"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get job details
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: updateJob
+      tags: [jobs]
+      summary: Update a job posting
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJob"
+      responses:
+        "200":
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteJob
+      tags: [jobs]
+      summary: Delete a job posting
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "204":
+          description: Job deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /candidates:
+    get:
+      operationId: listCandidates
+      tags: [candidates]
+      summary: List candidates
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+        - name: search
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated list of candidates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedCandidates"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      operationId: createCandidate
+      tags: [candidates]
+      summary: Create a candidate
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCandidate"
+      responses:
+        "201":
+          description: Candidate created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Candidate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /applications:
+    get:
+      operationId: listApplications
+      tags: [applications]
+      summary: List applications
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+        - name: jobId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApplicationStatus"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated list of applications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedApplications"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /applications/{id}:
+    get:
+      operationId: getApplication
+      tags: [applications]
+      summary: Get application details with ratings
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: Application details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /applications/{id}/status:
+    patch:
+      operationId: updateApplicationStatus
+      tags: [applications]
+      summary: Update application status
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: "#/components/schemas/ApplicationStatus"
+              required:
+                - status
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /applications/{id}/ratings:
+    get:
+      operationId: getApplicationRatings
+      tags: [applications]
+      summary: Get ratings for an application
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      responses:
+        "200":
+          description: List of ratings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationRating"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      operationId: rateApplication
+      tags: [applications]
+      summary: Rate an application (1-5 stars)
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - $ref: "#/components/parameters/OrganizationIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRating"
+      responses:
+        "201":
+          description: Rating created or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationRating"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
+  securitySchemes:
+    clerkAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk session token
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrgIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrganizationIdHeader:
+      name: X-Organization-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: The organization context for this request
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
     HealthStatus:
       type: object
       properties:
@@ -34,3 +449,455 @@ components:
       required:
         - status
 
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - slug
+        - isActive
+
+    OrganizationMembership:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [admin, hiring_manager, viewer]
+        orgName:
+          type: string
+        orgSlug:
+          type: string
+        orgLogoUrl:
+          type: string
+          nullable: true
+      required:
+        - organizationId
+        - role
+        - orgName
+        - orgSlug
+
+    JobStatus:
+      type: string
+      enum: [draft, published, closed, archived]
+
+    EmploymentType:
+      type: string
+      enum: [full_time, part_time, contract, internship, temporary]
+
+    CustomField:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, textarea, select, file, boolean]
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            type: string
+        order:
+          type: integer
+      required:
+        - id
+        - label
+        - type
+        - required
+        - order
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        department:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        salaryMin:
+          type: integer
+          nullable: true
+        salaryMax:
+          type: integer
+          nullable: true
+        salaryCurrency:
+          type: string
+        description:
+          type: string
+          nullable: true
+        requirements:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        customFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomField"
+        isRemote:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organizationId
+        - title
+        - employmentType
+        - status
+        - isRemote
+        - createdBy
+
+    CreateJob:
+      type: object
+      properties:
+        title:
+          type: string
+        department:
+          type: string
+        location:
+          type: string
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        salaryMin:
+          type: integer
+        salaryMax:
+          type: integer
+        salaryCurrency:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        customFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomField"
+        isRemote:
+          type: boolean
+      required:
+        - title
+
+    UpdateJob:
+      type: object
+      properties:
+        title:
+          type: string
+        department:
+          type: string
+        location:
+          type: string
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        salaryMin:
+          type: integer
+        salaryMax:
+          type: integer
+        salaryCurrency:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        customFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomField"
+        isRemote:
+          type: boolean
+
+    PaginatedJobs:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+
+    Candidate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        resumeUrl:
+          type: string
+          nullable: true
+        linkedinUrl:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - organizationId
+        - firstName
+        - lastName
+        - email
+
+    CreateCandidate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        resumeUrl:
+          type: string
+        linkedinUrl:
+          type: string
+        source:
+          type: string
+      required:
+        - firstName
+        - lastName
+        - email
+
+    PaginatedCandidates:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candidate"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+
+    ApplicationStatus:
+      type: string
+      enum: [new, reviewed, shortlisted, rejected, hired]
+
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        candidateId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        customFieldResponses:
+          type: object
+          additionalProperties:
+            type: string
+        coverLetter:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        appliedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - jobId
+        - candidateId
+        - status
+
+    ApplicationDetail:
+      allOf:
+        - $ref: "#/components/schemas/Application"
+        - type: object
+          properties:
+            candidateFirstName:
+              type: string
+            candidateLastName:
+              type: string
+            candidateEmail:
+              type: string
+            candidatePhone:
+              type: string
+              nullable: true
+            candidateResumeUrl:
+              type: string
+              nullable: true
+            jobTitle:
+              type: string
+            jobDepartment:
+              type: string
+              nullable: true
+            ratings:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationRating"
+
+    PaginatedApplications:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            allOf:
+              - $ref: "#/components/schemas/Application"
+              - type: object
+                properties:
+                  candidateFirstName:
+                    type: string
+                  candidateLastName:
+                    type: string
+                  candidateEmail:
+                    type: string
+                  jobTitle:
+                    type: string
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - data
+        - pagination
+
+    ApplicationRating:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        ratedBy:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - applicationId
+        - ratedBy
+        - rating
+
+    CreateRating:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+      required:
+        - rating

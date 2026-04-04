@@ -5,7 +5,8 @@
  * LastATS - Applicant Tracking System API
  * OpenAPI spec version: 0.1.0
  */
+import type { ApplicationStatus } from "./applicationStatus";
 
-export interface HealthStatus {
-  status: string;
-}
+export type UpdateApplicationStatusBody = {
+  status: ApplicationStatus;
+};
