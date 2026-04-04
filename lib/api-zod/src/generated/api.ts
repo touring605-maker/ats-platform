@@ -72,7 +72,7 @@ export const GetOrganizationMembersHeader = zod.object({
 export const GetOrganizationMembersResponseItem = zod.object({
   id: zod.string().uuid(),
   organizationId: zod.string().uuid(),
-  clerkUserId: zod.string(),
+  userId: zod.string().uuid(),
   role: zod.enum(["admin", "hiring_manager", "viewer"]),
   displayName: zod.string().nullish(),
   email: zod.string().nullish(),
@@ -98,7 +98,7 @@ export const AddOrganizationMemberHeader = zod.object({
 });
 
 export const AddOrganizationMemberBody = zod.object({
-  clerkUserId: zod.string(),
+  userId: zod.string().uuid(),
   role: zod.enum(["admin", "hiring_manager", "viewer"]).optional(),
   displayName: zod.string().optional(),
   email: zod.string().optional(),

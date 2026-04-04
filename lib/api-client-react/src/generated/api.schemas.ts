@@ -308,7 +308,7 @@ export const OrganizationMemberRole = {
 export interface OrganizationMember {
   id: string;
   organizationId: string;
-  clerkUserId: string;
+  userId: string;
   role: OrganizationMemberRole;
   displayName?: string | null;
   email?: string | null;
@@ -326,7 +326,7 @@ export const AddOrganizationMemberRole = {
 } as const;
 
 export interface AddOrganizationMember {
-  clerkUserId: string;
+  userId: string;
   role?: AddOrganizationMemberRole;
   displayName?: string;
   email?: string;

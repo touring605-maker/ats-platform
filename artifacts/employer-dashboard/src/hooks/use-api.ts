@@ -1,78 +1,75 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth, useOrganization } from "@clerk/clerk-react";
+import { useAuth } from "@/hooks/use-auth";
 import apiClient from "@/lib/api-config";
 
 function useOrgHeaders() {
-  const { getToken } = useAuth();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return async () => {
-    const token = await getToken();
     return {
-      Authorization: `Bearer ${token}`,
-      "X-Organization-Id": organization?.id || "",
+      "X-Organization-Id": currentOrg?.organizationId || "",
     };
   };
 }
 
 export function useDashboardSummary() {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["dashboard-summary", organization?.id],
+    queryKey: ["dashboard-summary", currentOrg?.organizationId],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get("/dashboard/summary", { headers });
       return data;
     },
-    enabled: !!organization?.id,
+    enabled: !!currentOrg?.organizationId,
   });
 }
 
 export function useJobStats() {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["job-stats", organization?.id],
+    queryKey: ["job-stats", currentOrg?.organizationId],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get("/jobs/stats", { headers });
       return data;
     },
-    enabled: !!organization?.id,
+    enabled: !!currentOrg?.organizationId,
   });
 }
 
 export function useJobs(params?: { status?: string; search?: string; department?: string; location?: string; page?: number; limit?: number }) {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["jobs", organization?.id, params],
+    queryKey: ["jobs", currentOrg?.organizationId, params],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get("/jobs", { headers, params });
       return data;
     },
-    enabled: !!organization?.id,
+    enabled: !!currentOrg?.organizationId,
   });
 }
 
 export function useJob(id: string | undefined) {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["job", id, organization?.id],
+    queryKey: ["job", id, currentOrg?.organizationId],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get(`/jobs/${id}`, { headers });
       return data;
     },
-    enabled: !!id && !!organization?.id,
+    enabled: !!id && !!currentOrg?.organizationId,
   });
 }
 
@@ -143,31 +140,31 @@ export function useApplications(params?: {
   limit?: number;
 }) {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["applications", organization?.id, params],
+    queryKey: ["applications", currentOrg?.organizationId, params],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get("/applications", { headers, params });
       return data;
     },
-    enabled: !!organization?.id,
+    enabled: !!currentOrg?.organizationId,
   });
 }
 
 export function useApplication(id: string | undefined) {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["application", id, organization?.id],
+    queryKey: ["application", id, currentOrg?.organizationId],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get(`/applications/${id}`, { headers });
       return data;
     },
-    enabled: !!id && !!organization?.id,
+    enabled: !!id && !!currentOrg?.organizationId,
   });
 }
 
@@ -245,7 +242,6 @@ export function useAddRating() {
 }
 
 export function useResumeUrl(applicationId: string | undefined, resumeUrl: string | null | undefined) {
-  const { getToken } = useAuth();
   const prevUrlRef = useRef<string | null>(null);
 
   const query = useQuery({
@@ -255,10 +251,9 @@ export function useResumeUrl(applicationId: string | undefined, resumeUrl: strin
         URL.revokeObjectURL(prevUrlRef.current);
         prevUrlRef.current = null;
       }
-      const token = await getToken();
       const response = await fetch(
         `${import.meta.env.BASE_URL}api/applications/${applicationId}/resume`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to fetch resume");
       const blob = await response.blob();
@@ -284,25 +279,25 @@ export function useResumeUrl(applicationId: string | undefined, resumeUrl: strin
 
 export function useCandidates(params?: { search?: string; page?: number; limit?: number }) {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["candidates", organization?.id, params],
+    queryKey: ["candidates", currentOrg?.organizationId, params],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get("/candidates", { headers, params });
       return data;
     },
-    enabled: !!organization?.id,
+    enabled: !!currentOrg?.organizationId,
   });
 }
 
 export function useEmailTemplates() {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["email-templates", organization?.id],
+    queryKey: ["email-templates", currentOrg?.organizationId],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get("/email-templates", { headers });
@@ -319,7 +314,7 @@ export function useEmailTemplates() {
         updatedAt: string;
       }>;
     },
-    enabled: !!organization?.id,
+    enabled: !!currentOrg?.organizationId,
   });
 }
 
@@ -421,10 +416,10 @@ export function useBulkEmail() {
 
 export function useEmailHistory(applicationId: string | undefined) {
   const getHeaders = useOrgHeaders();
-  const { organization } = useOrganization();
+  const { currentOrg } = useAuth();
 
   return useQuery({
-    queryKey: ["email-history", organization?.id, applicationId],
+    queryKey: ["email-history", currentOrg?.organizationId, applicationId],
     queryFn: async () => {
       const headers = await getHeaders();
       const { data } = await apiClient.get(`/applications/${applicationId}/emails`, { headers });
@@ -439,6 +434,6 @@ export function useEmailHistory(applicationId: string | undefined) {
         errorMessage: string | null;
       }>;
     },
-    enabled: !!organization?.id && !!applicationId,
+    enabled: !!currentOrg?.organizationId && !!applicationId,
   });
 }

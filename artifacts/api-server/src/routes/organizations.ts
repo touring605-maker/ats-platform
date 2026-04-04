@@ -19,7 +19,7 @@ router.get("/mine", requireAuth, async (req, res) => {
     })
     .from(organizationMembersTable)
     .innerJoin(organizationsTable, eq(organizationMembersTable.organizationId, organizationsTable.id))
-    .where(eq(organizationMembersTable.clerkUserId, userId));
+    .where(eq(organizationMembersTable.userId, userId));
 
   res.json(memberships);
 });
@@ -73,8 +73,8 @@ router.post("/:id/members", requireOrgMembership(["admin"]), async (req, res) =>
     return;
   }
 
-  const { clerkUserId, role, displayName, email } = req.body as {
-    clerkUserId: string;
+  const { userId, role, displayName, email } = req.body as {
+    userId: string;
     role?: "admin" | "hiring_manager" | "viewer";
     displayName?: string;
     email?: string;
@@ -86,13 +86,13 @@ router.post("/:id/members", requireOrgMembership(["admin"]), async (req, res) =>
     .insert(organizationMembersTable)
     .values({
       organizationId: id,
-      clerkUserId,
+      userId,
       role: memberRole,
       displayName,
       email,
     })
     .onConflictDoUpdate({
-      target: [organizationMembersTable.organizationId, organizationMembersTable.clerkUserId],
+      target: [organizationMembersTable.organizationId, organizationMembersTable.userId],
       set: { role: memberRole, displayName, email },
     })
     .returning();

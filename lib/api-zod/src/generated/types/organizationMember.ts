@@ -10,7 +10,7 @@ import type { OrganizationMemberRole } from "./organizationMemberRole";
 export interface OrganizationMember {
   id: string;
   organizationId: string;
-  clerkUserId: string;
+  userId: string;
   role: OrganizationMemberRole;
   displayName?: string | null;
   email?: string | null;

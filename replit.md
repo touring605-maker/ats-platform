@@ -8,25 +8,29 @@ LastATS — Applicant Tracking System SaaS platform using a product-based archit
 
 The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARDS.md`). Key structure:
 
-- **`lib/db/src/schema/`** — Drizzle ORM schema: organizations, organizationMembers, jobs, candidates, applications, applicationRatings
-- **`artifacts/api-server/`** — Express 5 API server with Clerk auth, tenant-isolated routes for jobs, candidates, applications, organizations, dashboard
-- **`artifacts/employer-dashboard/`** — React + Vite employer dashboard with Clerk auth, Shadcn UI, TanStack Query
+- **`lib/db/src/schema/`** — Drizzle ORM schema: users, organizations, organizationMembers, jobs, candidates, applications, applicationRatings
+- **`artifacts/api-server/`** — Express 5 API server with built-in email/password auth (bcryptjs + express-session), tenant-isolated routes for jobs, candidates, applications, organizations, dashboard
+- **`artifacts/employer-dashboard/`** — React + Vite employer dashboard with built-in auth, Shadcn UI, TanStack Query
 - **`artifacts/careers-page/`** — React + Vite public careers page (no auth), job listings, application form with resume upload
 - **`lib/api-spec/`** — OpenAPI 3.1 spec with Orval codegen
 - **`lib/api-zod/`** — Generated Zod schemas from OpenAPI spec (used for server-side validation)
 
 ## Authentication
 
-- **Provider**: Clerk (auto-provisioned)
-- **Server middleware**: `@clerk/express` — `clerkMiddleware()` + custom `requireAuth` and `requireOrgMembership` middleware
-- **Frontend**: `@clerk/clerk-react` — ClerkProvider, SignIn, OrganizationSwitcher, useAuth/useOrganization hooks
+- **Provider**: Built-in email/password auth (bcryptjs for hashing, express-session + connect-pg-simple for sessions)
+- **Server middleware**: Session-based `requireAuth` and `requireOrgMembership` middleware (no external auth provider)
+- **Frontend**: Custom AuthProvider context (`src/hooks/use-auth.tsx`) — manages login, register, logout, persona login, org selection
+- **Dev bypass**: Quick Access panel on login page shows seeded personas (only in NODE_ENV=development, via GET /api/auth/personas)
 - **Tenant isolation**: `X-Organization-Id` header on all org-scoped requests, membership verified against `organization_members` table
 - **Roles**: admin, hiring_manager, viewer
+- **Session store**: PostgreSQL `session` table (created by connect-pg-simple or manually)
+- **Demo credentials**: admin@acme-corp.example.com / password123, manager@acme-corp.example.com / password123, viewer@acme-corp.example.com / password123
 
 ## Database Tables
 
 - `organizations` — tenant/company records with slug, branding
-- `organization_members` — maps Clerk users to orgs with roles
+- `users` — user accounts with email, passwordHash, displayName
+- `organization_members` — maps users to orgs with roles (userId references users.id)
 - `jobs` — job postings with status lifecycle (draft→published→closed→archived), custom application form fields
 - `candidates` — candidate profiles scoped to organization
 - `applications` — links candidates to jobs with status pipeline (new→reviewed→shortlisted→rejected/hired)
@@ -46,7 +50,7 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Auth**: Clerk
+- **Auth**: Built-in (bcryptjs + express-session + connect-pg-simple)
 - **Database**: PostgreSQL + Drizzle ORM
 - **Frontend**: React 19 + Vite + wouter (routing) + TanStack Query + Shadcn UI + Tailwind CSS
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`, generated Zod schemas from OpenAPI spec
@@ -67,6 +71,12 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 ## API Endpoints
 
 - `GET /api/healthz` — health check (public)
+- `POST /api/auth/register` — register new user (email, password, displayName)
+- `POST /api/auth/login` — login with email/password
+- `POST /api/auth/logout` — logout (destroy session)
+- `GET /api/auth/me` — get current user + organizations (session required)
+- `GET /api/auth/personas` — list dev personas (dev only)
+- `POST /api/auth/persona-login` — login as persona (dev only)
 - `GET /api/organizations/mine` — get current user's orgs (auth required)
 - `GET /api/dashboard/summary` — dashboard overview with stats, pipeline, recent jobs (org membership required)
 - `GET /api/jobs/stats` — job counts by status (org membership required)
@@ -102,7 +112,7 @@ The codebase follows the Architecture Standards document (`ARCHITECTURE_STANDARD
 - `/applications` — Applications list with search, job filter, status filter, sortable columns (date/name/rating/status), rating display, pagination
 - `/applications/:id` — Application detail: candidate info, cover letter, custom field responses, resume download, internal notes, status updates, star rating with history, email send dialog, email history timeline
 - `/email-templates` — Email templates management: list, create, edit, delete, preview, seed defaults, merge field insertion
-- `/settings` — Organization settings (Clerk OrganizationProfile)
+- `/settings` — Account and organization settings
 
 ## Frontend Pages (careers-page)
 

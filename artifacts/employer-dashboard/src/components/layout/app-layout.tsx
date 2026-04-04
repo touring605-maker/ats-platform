@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
 import Sidebar from "./sidebar";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { UserButton, useOrganization } from "@clerk/clerk-react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   Briefcase,
@@ -26,7 +26,7 @@ const navItems = [
 
 function MobileSidebar() {
   const [location] = useLocation();
-  const { organization } = useOrganization();
+  const { user, currentOrg, logout } = useAuth();
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -41,10 +41,10 @@ function MobileSidebar() {
           </div>
           <span className="font-semibold text-lg text-gray-900">LastATS</span>
         </div>
-        {organization && (
+        {currentOrg && (
           <div className="px-6 py-3 border-b border-gray-100">
             <p className="text-xs text-gray-500">Organization</p>
-            <p className="text-sm font-medium text-gray-900 truncate">{organization.name}</p>
+            <p className="text-sm font-medium text-gray-900 truncate">{currentOrg.orgName}</p>
           </div>
         )}
         <nav className="flex-1 py-4 px-3 space-y-1">
@@ -69,8 +69,20 @@ function MobileSidebar() {
         </nav>
         <div className="border-t border-gray-100 p-4">
           <div className="flex items-center gap-3">
-            <UserButton afterSignOutUrl="/" />
-            <span className="text-sm text-gray-600">Account</span>
+            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-xs">
+              {user?.displayName?.split(" ").map((n) => n[0]).join("") || "?"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.displayName}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </SheetContent>

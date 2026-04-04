@@ -1,5 +1,4 @@
 import type { Request, Response, NextFunction } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { organizationMembersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -20,9 +19,14 @@ declare global {
   }
 }
 
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+  }
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const auth = getAuth(req);
-  const userId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+  const userId = req.session?.userId;
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -33,8 +37,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 
 export function requireOrgMembership(allowedRoles?: Array<"admin" | "hiring_manager" | "viewer">) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const auth = getAuth(req);
-    const userId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
+    const userId = req.session?.userId;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -52,7 +55,7 @@ export function requireOrgMembership(allowedRoles?: Array<"admin" | "hiring_mana
       .where(
         and(
           eq(organizationMembersTable.organizationId, orgId),
-          eq(organizationMembersTable.clerkUserId, userId)
+          eq(organizationMembersTable.userId, userId)
         )
       )
       .limit(1);

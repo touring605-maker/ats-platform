@@ -8,7 +8,7 @@
 import type { AddOrganizationMemberRole } from "./addOrganizationMemberRole";
 
 export interface AddOrganizationMember {
-  clerkUserId: string;
+  userId: string;
   role?: AddOrganizationMemberRole;
   displayName?: string;
   email?: string;

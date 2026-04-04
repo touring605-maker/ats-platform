@@ -1825,8 +1825,9 @@ components:
         organizationId:
           type: string
           format: uuid
-        clerkUserId:
+        userId:
           type: string
+          format: uuid
         role:
           type: string
           enum: [admin, hiring_manager, viewer]
@@ -1845,14 +1846,15 @@ components:
       required:
         - id
         - organizationId
-        - clerkUserId
+        - userId
         - role
 
     AddOrganizationMember:
       type: object
       properties:
-        clerkUserId:
+        userId:
           type: string
+          format: uuid
         role:
           type: string
           enum: [admin, hiring_manager, viewer]
@@ -1861,7 +1863,7 @@ components:
         email:
           type: string
       required:
-        - clerkUserId
+        - userId
 
     CreateRating:
       type: object

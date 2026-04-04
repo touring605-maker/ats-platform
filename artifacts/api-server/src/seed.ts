@@ -1,5 +1,7 @@
+import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import {
+  usersTable,
   organizationsTable,
   organizationMembersTable,
   jobsTable,
@@ -10,6 +12,45 @@ import {
 
 async function seed() {
   console.log("Seeding LastATS demo data...");
+
+  const passwordHash = await bcrypt.hash("password123", 10);
+
+  const [adminUser] = await db
+    .insert(usersTable)
+    .values({
+      email: "admin@acme-corp.example.com",
+      passwordHash,
+      displayName: "Alex Admin",
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  const [managerUser] = await db
+    .insert(usersTable)
+    .values({
+      email: "manager@acme-corp.example.com",
+      passwordHash,
+      displayName: "Morgan Manager",
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  const [viewerUser] = await db
+    .insert(usersTable)
+    .values({
+      email: "viewer@acme-corp.example.com",
+      passwordHash,
+      displayName: "Val Viewer",
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (!adminUser || !managerUser || !viewerUser) {
+    console.log("Users already exist, skipping seed.");
+    process.exit(0);
+  }
+
+  console.log("Created 3 users (password: password123)");
 
   const [org] = await db
     .insert(organizationsTable)
@@ -29,32 +70,31 @@ async function seed() {
 
   console.log(`Created organization: ${org.name} (${org.id})`);
 
-  const [adminMember] = await db
+  await db
     .insert(organizationMembersTable)
     .values([
       {
         organizationId: org.id,
-        clerkUserId: "seed_admin_001",
+        userId: adminUser.id,
         role: "admin",
         displayName: "Alex Admin",
         email: "admin@acme-corp.example.com",
       },
       {
         organizationId: org.id,
-        clerkUserId: "seed_manager_001",
+        userId: managerUser.id,
         role: "hiring_manager",
         displayName: "Morgan Manager",
         email: "manager@acme-corp.example.com",
       },
       {
         organizationId: org.id,
-        clerkUserId: "seed_viewer_001",
+        userId: viewerUser.id,
         role: "viewer",
         displayName: "Val Viewer",
         email: "viewer@acme-corp.example.com",
       },
-    ])
-    .returning();
+    ]);
 
   console.log("Created 3 organization members");
 
@@ -75,7 +115,7 @@ async function seed() {
         status: "published",
         publishedAt: new Date(),
         isRemote: true,
-        createdBy: "seed_admin_001",
+        createdBy: adminUser.id,
         customFields: [
           { id: "yoe", label: "Years of Experience", type: "text", required: true, order: 0 },
           { id: "portfolio", label: "Portfolio URL", type: "text", required: false, order: 1 },
@@ -95,7 +135,7 @@ async function seed() {
         status: "published",
         publishedAt: new Date(),
         isRemote: false,
-        createdBy: "seed_admin_001",
+        createdBy: adminUser.id,
       },
       {
         organizationId: org.id,
@@ -110,7 +150,7 @@ async function seed() {
         requirements: "Experience with Kubernetes, Terraform, and CI/CD pipelines.",
         status: "draft",
         isRemote: true,
-        createdBy: "seed_manager_001",
+        createdBy: managerUser.id,
       },
       {
         organizationId: org.id,
@@ -127,7 +167,7 @@ async function seed() {
         publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         closedAt: new Date(),
         isRemote: false,
-        createdBy: "seed_admin_001",
+        createdBy: adminUser.id,
       },
     ])
     .returning();
@@ -228,25 +268,25 @@ async function seed() {
   await db.insert(applicationRatingsTable).values([
     {
       applicationId: applications[0].id,
-      ratedBy: "seed_admin_001",
+      ratedBy: adminUser.id,
       rating: 5,
       comment: "Excellent candidate. Strong technical background.",
     },
     {
       applicationId: applications[0].id,
-      ratedBy: "seed_manager_001",
+      ratedBy: managerUser.id,
       rating: 4,
       comment: "Good fit for the team.",
     },
     {
       applicationId: applications[1].id,
-      ratedBy: "seed_admin_001",
+      ratedBy: adminUser.id,
       rating: 3,
       comment: "Meets minimum requirements.",
     },
     {
       applicationId: applications[4].id,
-      ratedBy: "seed_manager_001",
+      ratedBy: managerUser.id,
       rating: 4,
       comment: "Strong design portfolio.",
     },

@@ -475,7 +475,7 @@ router.get("/:id/resume", requireAuth, async (req, res) => {
     .where(
       and(
         eq(organizationMembersTable.organizationId, application.orgId),
-        eq(organizationMembersTable.clerkUserId, userId)
+        eq(organizationMembersTable.userId, userId)
       )
     )
     .limit(1);
