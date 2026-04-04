@@ -24,7 +24,7 @@ tags:
     description: Public careers page and application submission
 
 security:
-  - clerkAuth: []
+  - sessionAuth: []
 
 paths:
   /healthz:
@@ -1164,11 +1164,11 @@ paths:
 
 components:
   securitySchemes:
-    clerkAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: Clerk session token
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Session cookie for built-in email/password auth
 
   parameters:
     IdPath:

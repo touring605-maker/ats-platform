@@ -1,6 +1,7 @@
 import { useLocation, Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import PersonaSwitcher from "@/components/persona-switcher";
 import {
   LayoutDashboard,
   Briefcase,
@@ -61,7 +62,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-gray-100 p-4">
+      <div className="border-t border-gray-100 p-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-xs">
             {user?.displayName?.split(" ").map((n) => n[0]).join("") || "?"}
@@ -78,6 +79,7 @@ export default function Sidebar() {
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+        <PersonaSwitcher />
       </div>
     </aside>
   );
