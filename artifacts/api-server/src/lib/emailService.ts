@@ -69,7 +69,13 @@ export interface SendEmailOptions {
   sentBy?: string;
 }
 
-export async function sendAndLogEmail(options: SendEmailOptions): Promise<string> {
+export interface SendEmailResult {
+  emailLogId: string;
+  status: "sent" | "failed";
+  errorMessage?: string;
+}
+
+export async function sendAndLogEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   let status: "sent" | "failed" = "sent";
   let errorMessage: string | undefined;
 
@@ -103,7 +109,7 @@ export async function sendAndLogEmail(options: SendEmailOptions): Promise<string
     })
     .returning();
 
-  return log.id;
+  return { emailLogId: log.id, status, errorMessage };
 }
 
 export { emailService };

@@ -551,6 +551,8 @@ export const ListApplicationsSortOrder = {
 
 export type UpdateApplicationStatusBody = {
   status: ApplicationStatus;
+  /** Whether to send an email notification to the candidate about the status change */
+  notifyCandidate?: boolean;
 };
 
 export type UpdateApplicationNotesBody = {

@@ -519,6 +519,15 @@ router.post("/:id/email", requireOrgMembership(["admin", "hiring_manager"]), asy
     return;
   }
 
+  if (templateId) {
+    const [tmpl] = await db.select({ id: emailTemplatesTable.id }).from(emailTemplatesTable)
+      .where(and(eq(emailTemplatesTable.id, templateId), eq(emailTemplatesTable.organizationId, organizationId))).limit(1);
+    if (!tmpl) {
+      res.status(400).json({ error: "Template not found or does not belong to this organization" });
+      return;
+    }
+  }
+
   const [application] = await db
     .select({
       id: applicationsTable.id,
@@ -538,7 +547,7 @@ router.post("/:id/email", requireOrgMembership(["admin", "hiring_manager"]), asy
     return;
   }
 
-  const emailLogId = await sendAndLogEmail({
+  const result = await sendAndLogEmail({
     organizationId,
     applicationId: id,
     candidateId: application.candidateId,
@@ -550,7 +559,12 @@ router.post("/:id/email", requireOrgMembership(["admin", "hiring_manager"]), asy
     sentBy: userId,
   });
 
-  res.json({ message: "Email sent", emailLogId });
+  if (result.status === "failed") {
+    res.status(500).json({ error: "Failed to send email", emailLogId: result.emailLogId, errorMessage: result.errorMessage });
+    return;
+  }
+
+  res.json({ message: "Email sent", emailLogId: result.emailLogId });
 });
 
 router.post("/bulk-email", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
@@ -565,6 +579,15 @@ router.post("/bulk-email", requireOrgMembership(["admin", "hiring_manager"]), as
   if (!subject || !htmlBody) {
     res.status(400).json({ error: "subject and htmlBody are required" });
     return;
+  }
+
+  if (templateId) {
+    const [tmpl] = await db.select({ id: emailTemplatesTable.id }).from(emailTemplatesTable)
+      .where(and(eq(emailTemplatesTable.id, templateId), eq(emailTemplatesTable.organizationId, organizationId))).limit(1);
+    if (!tmpl) {
+      res.status(400).json({ error: "Template not found or does not belong to this organization" });
+      return;
+    }
   }
 
   const applications = await db
@@ -610,7 +633,7 @@ router.post("/bulk-email", requireOrgMembership(["admin", "hiring_manager"]), as
     const renderedText = textBody ? renderTemplate(textBody, mergeData) : undefined;
 
     try {
-      const emailLogId = await sendAndLogEmail({
+      const emailResult = await sendAndLogEmail({
         organizationId,
         applicationId: app.id,
         candidateId: app.candidateId,
@@ -621,7 +644,7 @@ router.post("/bulk-email", requireOrgMembership(["admin", "hiring_manager"]), as
         textBody: renderedText,
         sentBy: userId,
       });
-      results.push({ applicationId: app.id, emailLogId, status: "sent" });
+      results.push({ applicationId: app.id, emailLogId: emailResult.emailLogId, status: emailResult.status });
     } catch {
       results.push({ applicationId: app.id, emailLogId: "", status: "failed" });
     }

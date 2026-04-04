@@ -9,4 +9,6 @@ import type { ApplicationStatus } from "./applicationStatus";
 
 export type UpdateApplicationStatusBody = {
   status: ApplicationStatus;
+  /** Whether to send an email notification to the candidate about the status change */
+  notifyCandidate?: boolean;
 };

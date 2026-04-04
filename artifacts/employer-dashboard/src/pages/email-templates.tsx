@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DOMPurify from "dompurify";
 import {
   useEmailTemplates,
   useSeedDefaultTemplates,
@@ -322,7 +323,7 @@ export default function EmailTemplates() {
               <p className="text-sm font-medium mb-2">Subject: {previewTemplate.subject}</p>
               <div
                 className="border rounded-lg p-4 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: previewTemplate.htmlBody }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewTemplate.htmlBody) }}
               />
             </div>
           )}

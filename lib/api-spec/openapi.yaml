@@ -649,6 +649,9 @@ paths:
               properties:
                 status:
                   $ref: "#/components/schemas/ApplicationStatus"
+                notifyCandidate:
+                  type: boolean
+                  description: Whether to send an email notification to the candidate about the status change
               required:
                 - status
       responses:

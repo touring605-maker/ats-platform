@@ -1022,6 +1022,12 @@ export const UpdateApplicationStatusHeader = zod.object({
 
 export const UpdateApplicationStatusBody = zod.object({
   status: zod.enum(["new", "reviewed", "shortlisted", "rejected", "hired"]),
+  notifyCandidate: zod
+    .boolean()
+    .optional()
+    .describe(
+      "Whether to send an email notification to the candidate about the status change",
+    ),
 });
 
 export const UpdateApplicationStatusResponse = zod.object({
