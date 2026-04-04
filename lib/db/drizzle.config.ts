@@ -6,8 +6,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 export default defineConfig({
-  out: path.join(__dirname, "./migrations"),
-  schema: path.join(__dirname, "./src/schema/index.ts"),
+  out: "./migrations",
+  schema: "./src/schema/index.ts",
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL,
