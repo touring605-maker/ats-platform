@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { organizationsTable, organizationMembersTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireAuth, requireOrgMembership } from "../middlewares/requireAuth";
 
 const router = Router();
 
 router.get("/mine", requireAuth, async (req, res) => {
-  const userId = (req as any).userId as string;
+  const userId = req.userId!;
 
   const memberships = await db
     .select({
@@ -73,20 +73,27 @@ router.post("/:id/members", requireOrgMembership(["admin"]), async (req, res) =>
     return;
   }
 
-  const { clerkUserId, role, displayName, email } = req.body;
+  const { clerkUserId, role, displayName, email } = req.body as {
+    clerkUserId: string;
+    role?: "admin" | "hiring_manager" | "viewer";
+    displayName?: string;
+    email?: string;
+  };
+
+  const memberRole = role || "viewer";
 
   const [member] = await db
     .insert(organizationMembersTable)
     .values({
       organizationId: id,
       clerkUserId,
-      role: role || "viewer",
+      role: memberRole,
       displayName,
       email,
     })
     .onConflictDoUpdate({
       target: [organizationMembersTable.organizationId, organizationMembersTable.clerkUserId],
-      set: { role: role || "viewer", displayName, email },
+      set: { role: memberRole, displayName, email },
     })
     .returning();
 

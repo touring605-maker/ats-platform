@@ -8,7 +8,13 @@ const router = Router();
 
 router.get("/", requireOrgMembership(), async (req, res) => {
   const { organizationId } = req.auth_context!;
-  const { jobId, status, page = "1", limit = "20" } = req.query as Record<string, string>;
+  const jobId = req.query.jobId as string | undefined;
+  const status = req.query.status as string | undefined;
+  const page = (req.query.page as string | undefined) ?? "1";
+  const limit = (req.query.limit as string | undefined) ?? "20";
+
+  type AppStatus = "new" | "reviewed" | "shortlisted" | "rejected" | "hired";
+  const validAppStatuses: AppStatus[] = ["new", "reviewed", "shortlisted", "rejected", "hired"];
 
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
@@ -19,8 +25,8 @@ router.get("/", requireOrgMembership(), async (req, res) => {
   if (jobId) {
     conditions.push(eq(applicationsTable.jobId, jobId));
   }
-  if (status) {
-    conditions.push(eq(applicationsTable.status, status as any));
+  if (status && validAppStatuses.includes(status as AppStatus)) {
+    conditions.push(eq(applicationsTable.status, status as AppStatus));
   }
 
   const where = and(...conditions);

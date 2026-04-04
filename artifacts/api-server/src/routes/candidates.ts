@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { candidatesTable } from "@workspace/db/schema";
+import { candidatesTable, type InsertCandidate } from "@workspace/db/schema";
 import { eq, and, ilike, or, count } from "drizzle-orm";
 import { requireOrgMembership } from "../middlewares/requireAuth";
 
@@ -8,7 +8,9 @@ const router = Router();
 
 router.get("/", requireOrgMembership(), async (req, res) => {
   const { organizationId } = req.auth_context!;
-  const { search, page = "1", limit = "20" } = req.query as Record<string, string>;
+  const search = req.query.search as string | undefined;
+  const page = (req.query.page as string | undefined) ?? "1";
+  const limit = (req.query.limit as string | undefined) ?? "20";
 
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
@@ -64,11 +66,18 @@ router.get("/:id", requireOrgMembership(), async (req, res) => {
 
 router.post("/", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
   const { organizationId } = req.auth_context!;
+  const { firstName, lastName, email, phone, resumeUrl, linkedinUrl, source } = req.body;
 
   const [candidate] = await db
     .insert(candidatesTable)
     .values({
-      ...req.body,
+      firstName,
+      lastName,
+      email,
+      phone,
+      resumeUrl,
+      linkedinUrl,
+      source,
       organizationId,
     })
     .returning();
@@ -79,10 +88,16 @@ router.post("/", requireOrgMembership(["admin", "hiring_manager"]), async (req, 
 router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
   const { organizationId } = req.auth_context!;
   const id = req.params.id as string;
+  const { firstName, lastName, email, phone, resumeUrl, linkedinUrl, source } = req.body;
 
-  const updateData: Record<string, any> = { ...req.body };
-  delete updateData.id;
-  delete updateData.organizationId;
+  const updateData: Partial<InsertCandidate> = {};
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (email !== undefined) updateData.email = email;
+  if (phone !== undefined) updateData.phone = phone;
+  if (resumeUrl !== undefined) updateData.resumeUrl = resumeUrl;
+  if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
+  if (source !== undefined) updateData.source = source;
 
   const [candidate] = await db
     .update(candidatesTable)

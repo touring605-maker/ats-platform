@@ -15,25 +15,26 @@ declare global {
   namespace Express {
     interface Request {
       auth_context?: AuthContext;
+      userId?: string;
     }
   }
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = getAuth(req);
-  const userId = auth?.sessionClaims?.userId as string | undefined || auth?.userId;
+  const userId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  (req as any).userId = userId;
+  req.userId = userId;
   next();
 }
 
 export function requireOrgMembership(allowedRoles?: Array<"admin" | "hiring_manager" | "viewer">) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const auth = getAuth(req);
-    const userId = auth?.sessionClaims?.userId as string | undefined || auth?.userId;
+    const userId = (auth?.sessionClaims?.userId as string | undefined) || auth?.userId;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;

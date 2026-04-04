@@ -1,14 +1,21 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { jobsTable } from "@workspace/db/schema";
-import { eq, and, ilike, sql, count } from "drizzle-orm";
+import { jobsTable, type InsertJob } from "@workspace/db/schema";
+import { eq, and, ilike, count } from "drizzle-orm";
 import { requireOrgMembership } from "../middlewares/requireAuth";
+
+type JobStatus = "draft" | "published" | "closed" | "archived";
+const validJobStatuses: JobStatus[] = ["draft", "published", "closed", "archived"];
 
 const router = Router();
 
 router.get("/", requireOrgMembership(), async (req, res) => {
   const { organizationId } = req.auth_context!;
-  const { status, search, department, page = "1", limit = "20" } = req.query as Record<string, string>;
+  const status = req.query.status as string | undefined;
+  const search = req.query.search as string | undefined;
+  const department = req.query.department as string | undefined;
+  const page = req.query.page as string | undefined ?? "1";
+  const limit = req.query.limit as string | undefined ?? "20";
 
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
@@ -16,8 +23,8 @@ router.get("/", requireOrgMembership(), async (req, res) => {
 
   const conditions = [eq(jobsTable.organizationId, organizationId)];
 
-  if (status) {
-    conditions.push(eq(jobsTable.status, status as any));
+  if (status && validJobStatuses.includes(status as JobStatus)) {
+    conditions.push(eq(jobsTable.status, status as JobStatus));
   }
   if (search) {
     conditions.push(ilike(jobsTable.title, `%${search}%`));
@@ -64,11 +71,22 @@ router.get("/:id", requireOrgMembership(), async (req, res) => {
 
 router.post("/", requireOrgMembership(["admin", "hiring_manager"]), async (req, res) => {
   const { organizationId, userId } = req.auth_context!;
+  const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, customFields, isRemote } = req.body;
 
   const [job] = await db
     .insert(jobsTable)
     .values({
-      ...req.body,
+      title,
+      department,
+      location,
+      employmentType,
+      salaryMin,
+      salaryMax,
+      salaryCurrency,
+      description,
+      requirements,
+      customFields,
+      isRemote,
       organizationId,
       createdBy: userId,
     })
@@ -92,16 +110,29 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
     return;
   }
 
-  const updateData: Record<string, any> = { ...req.body };
-  delete updateData.id;
-  delete updateData.organizationId;
-  delete updateData.createdBy;
+  const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, status, customFields, isRemote } = req.body;
 
-  if (updateData.status === "published" && existing.status === "draft") {
-    updateData.publishedAt = new Date();
-  }
-  if (updateData.status === "closed" && existing.status === "published") {
-    updateData.closedAt = new Date();
+  const updateData: Partial<InsertJob> & { publishedAt?: Date; closedAt?: Date } = {};
+  if (title !== undefined) updateData.title = title;
+  if (department !== undefined) updateData.department = department;
+  if (location !== undefined) updateData.location = location;
+  if (employmentType !== undefined) updateData.employmentType = employmentType;
+  if (salaryMin !== undefined) updateData.salaryMin = salaryMin;
+  if (salaryMax !== undefined) updateData.salaryMax = salaryMax;
+  if (salaryCurrency !== undefined) updateData.salaryCurrency = salaryCurrency;
+  if (description !== undefined) updateData.description = description;
+  if (requirements !== undefined) updateData.requirements = requirements;
+  if (customFields !== undefined) updateData.customFields = customFields;
+  if (isRemote !== undefined) updateData.isRemote = isRemote;
+
+  if (status !== undefined && validJobStatuses.includes(status)) {
+    updateData.status = status;
+    if (status === "published" && existing.status === "draft") {
+      updateData.publishedAt = new Date();
+    }
+    if (status === "closed" && existing.status === "published") {
+      updateData.closedAt = new Date();
+    }
   }
 
   const [job] = await db
