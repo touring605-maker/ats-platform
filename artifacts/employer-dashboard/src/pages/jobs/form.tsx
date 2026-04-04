@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import CustomFieldsBuilder, { type CustomField } from "@/components/custom-fields-builder";
+import RichTextEditor from "@/components/rich-text-editor";
 
 interface JobFormProps {
   jobId?: string;
@@ -235,23 +236,19 @@ export default function JobForm({ jobId }: JobFormProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="description">Job Description</Label>
-              <Textarea
-                id="description"
+              <Label>Job Description</Label>
+              <RichTextEditor
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(val) => setForm({ ...form, description: val })}
                 placeholder="Describe the role, responsibilities, and what a typical day looks like..."
-                rows={6}
               />
             </div>
             <div>
-              <Label htmlFor="requirements">Requirements</Label>
-              <Textarea
-                id="requirements"
+              <Label>Requirements</Label>
+              <RichTextEditor
                 value={form.requirements}
-                onChange={(e) => setForm({ ...form, requirements: e.target.value })}
+                onChange={(val) => setForm({ ...form, requirements: val })}
                 placeholder="List the required skills, experience, and qualifications..."
-                rows={4}
               />
             </div>
           </CardContent>

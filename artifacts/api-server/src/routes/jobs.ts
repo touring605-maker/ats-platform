@@ -178,7 +178,7 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
 
   const { title, department, location, employmentType, salaryMin, salaryMax, salaryCurrency, description, requirements, status, customFields, isRemote } = parsed.data;
 
-  const updateData: Partial<InsertJob> & { publishedAt?: Date; closedAt?: Date } = {};
+  const updateData: Partial<InsertJob> & { publishedAt?: Date | null; closedAt?: Date | null } = {};
   if (title !== undefined) updateData.title = title;
   if (department !== undefined) updateData.department = department;
   if (location !== undefined) updateData.location = location;
@@ -196,7 +196,7 @@ router.patch("/:id", requireOrgMembership(["admin", "hiring_manager"]), async (r
     if (status === "published" && (existing.status === "draft" || existing.status === "closed")) {
       updateData.publishedAt = new Date();
       if (existing.status === "closed") {
-        updateData.closedAt = null as unknown as Date;
+        updateData.closedAt = null;
       }
     }
     if (status === "closed" && existing.status === "published") {

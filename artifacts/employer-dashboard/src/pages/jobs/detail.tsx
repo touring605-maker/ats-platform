@@ -121,7 +121,7 @@ export default function JobDetail({ jobId }: JobDetailProps) {
                 <CardTitle className="text-base">Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{job.description}</p>
+                <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: job.description }} />
               </CardContent>
             </Card>
           )}
@@ -131,7 +131,7 @@ export default function JobDetail({ jobId }: JobDetailProps) {
                 <CardTitle className="text-base">Requirements</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{job.requirements}</p>
+                <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: job.requirements }} />
               </CardContent>
             </Card>
           )}
