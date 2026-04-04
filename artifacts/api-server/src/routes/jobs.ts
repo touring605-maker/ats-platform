@@ -37,11 +37,11 @@ router.get("/", requireOrgMembership(), async (req, res) => {
   const search = req.query.search as string | undefined;
   const department = req.query.department as string | undefined;
   const location = req.query.location as string | undefined;
-  const page = (req.query.page as string | undefined) ?? "1";
-  const limit = (req.query.limit as string | undefined) ?? "20";
+  const rawPage = parseInt((req.query.page as string) || "1", 10);
+  const rawLimit = parseInt((req.query.limit as string) || "20", 10);
 
-  const pageNum = Math.max(1, parseInt(page));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+  const pageNum = Number.isNaN(rawPage) ? 1 : Math.max(1, rawPage);
+  const limitNum = Number.isNaN(rawLimit) ? 20 : Math.min(100, Math.max(1, rawLimit));
   const offset = (pageNum - 1) * limitNum;
 
   const conditions = [eq(jobsTable.organizationId, organizationId)];

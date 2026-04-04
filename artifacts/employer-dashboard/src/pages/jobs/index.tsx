@@ -31,7 +31,7 @@ export default function JobsPage() {
   const { toast } = useToast();
   const deleteJob = useDeleteJob();
 
-  const { data, isLoading } = useJobs({
+  const { data, isLoading, isError } = useJobs({
     search: search || undefined,
     status: status === "all" ? undefined : status,
     page,
@@ -90,7 +90,11 @@ export default function JobsPage() {
         </Select>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">Failed to load jobs. Please check your connection and try again.</p>
+        </div>
+      ) : isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-20" />
